@@ -60,43 +60,4 @@
       // Перемещение модели
       if (model) {
         model.rotation.y += controls.rotateY;
-        model.position.x += controls.moveX;
-        model.position.z += controls.moveZ;
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    // Инициализация джойстиков
-    function initJoystick() {
-      const manager = nipplejs.create({
-        zone: document.body,
-        mode: 'static',
-        position: { left: '50%', top: '50%' },
-        color: 'blue',
-      });
-
-      // Джойстик для перемещения
-      manager.on('move', (evt, data) => {
-        controls.moveX = data.vector.x * 0.1;
-        controls.moveZ = -data.vector.y * 0.1;
-      });
-
-      // Джойстик для вращения
-      manager.on('end', (evt, data) => {
-        controls.rotateY = data.angle.degree * 0.01;
-      });
-    }
-
-    // Обработка изменения размера окна
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    // Инициализация сцены
-    init();
-  </script>
-</body>
-</html>
+        model
