@@ -26,45 +26,4 @@
         const ambientLight = new THREE.AmbientLight(0x404040, 1); // мягкое освещение
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // направленный источник света
-        directionalLight.position.set(1, 1, 1).normalize();
-        scene.add(directionalLight);
-
-        // Ссылка на модель
-        const modelUrl = 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb'; // Убедитесь, что ссылка работает!
-
-        // Создаем загрузчик GLTF
-        const loader = new THREE.GLTFLoader();
-        loader.load(modelUrl, function(gltf) {
-            const model = gltf.scene;
-            scene.add(model);
-            model.scale.set(0.5, 0.5, 0.5);  // Масштаб модели
-            model.position.set(0, -1, 0);  // Позиция модели в сцене
-
-            animate();
-        }, undefined, function(error) {
-            console.error('Ошибка загрузки модели: ', error);
-        });
-
-        camera.position.z = 3;
-
-        window.addEventListener('resize', () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        });
-
-        function animate() {
-            requestAnimationFrame(animate);
-            // Поворот модели для динамического эффекта
-            scene.children.forEach((child) => {
-                if (child instanceof THREE.Mesh) {
-                    child.rotation.x += 0.01;
-                    child.rotation.y += 0.01;
-                }
-            });
-            renderer.render(scene, camera);
-        }
-    </script>
-</body>
-</html>
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // направленный источник
