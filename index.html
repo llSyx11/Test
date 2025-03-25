@@ -10,11 +10,12 @@
     </style>
 </head>
 <body>
-    <!-- Подключаем Three.js через модульный формат -->
-    <script type="module">
-        import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js";
-        import { GLTFLoader } from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/jsm/loaders/GLTFLoader.js";
+    <!-- Подключаем Three.js через CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Подключаем GLTFLoader через CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/loaders/GLTFLoader.js"></script>
 
+    <script>
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
@@ -32,7 +33,8 @@
         // Ссылка на модель
         const modelUrl = 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb'; // Убедитесь, что ссылка работает!
 
-        const loader = new GLTFLoader();
+        // Создаем загрузчик GLTF
+        const loader = new THREE.GLTFLoader();
         loader.load(modelUrl, function(gltf) {
             const model = gltf.scene;
             scene.add(model);
