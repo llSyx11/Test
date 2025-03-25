@@ -47,7 +47,7 @@
       // Камера
       camera.position.z = 5;
 
-      // Джойстики
+      // Инициализация джойстиков
       initJoystick();
 
       animate();
@@ -77,4 +77,26 @@
       });
 
       // Джойстик для перемещения
-      manager.on('move', (evt, data) =>
+      manager.on('move', (evt, data) => {
+        controls.moveX = data.vector.x * 0.1;
+        controls.moveZ = -data.vector.y * 0.1;
+      });
+
+      // Джойстик для вращения
+      manager.on('end', (evt, data) => {
+        controls.rotateY = data.angle.degree * 0.01;
+      });
+    }
+
+    // Обработка изменения размера окна
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Инициализация сцены
+    init();
+  </script>
+</body>
+</html>
