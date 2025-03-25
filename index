@@ -13,10 +13,10 @@
       display: block;
     }
   </style>
-  <!-- Загружаем библиотеки Three.js -->
+  <!-- Three.js основная библиотека -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Загрузчик GLTF, используя версию r128 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/loaders/GLTFLoader.js"></script>
+  <!-- UMD-версия GLTFLoader для r128 -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
 <body>
@@ -24,51 +24,46 @@
     let scene, camera, renderer, model;
     let controls = { moveX: 0, moveZ: 0, rotateY: 0 };
 
-    // Инициализация сцены
     function init() {
       scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
       renderer = new THREE.WebGLRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      // Свет
-      const light = new THREE.AmbientLight(0x404040); // мягкий белый свет
+      // Освещение
+      const light = new THREE.AmbientLight(0x404040);
       scene.add(light);
 
-      // Загрузка модели (используем правильный URL на GitHub Pages)
+      // Инициализация загрузчика
       const loader = new THREE.GLTFLoader();
-      loader.load('https://raw.githubusercontent.com/llSyx11/Test/main/001.glb', (gltf) => {
-        model = gltf.scene;
-        scene.add(model);
-      }, undefined, function (error) {
-        console.error(error);
-      });
+      loader.load(
+        'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
+        (gltf) => {
+          model = gltf.scene;
+          scene.add(model);
+        },
+        undefined,
+        (error) => {
+          console.error('Ошибка загрузки модели:', error);
+        }
+      );
 
-      // Камера
       camera.position.z = 5;
-
-      // Инициализация джойстиков
       initJoystick();
-
       animate();
     }
 
-    // Анимация
     function animate() {
       requestAnimationFrame(animate);
-
-      // Перемещение модели
       if (model) {
-        model.rotation.y += controls.rotateY; // вращение модели
-        model.position.x += controls.moveX;   // перемещение по оси X
-        model.position.z += controls.moveZ;   // перемещение по оси Z
+        model.rotation.y += controls.rotateY;
+        model.position.x += controls.moveX;
+        model.position.z += controls.moveZ;
       }
-
       renderer.render(scene, camera);
     }
 
-    // Инициализация джойстиков
     function initJoystick() {
       const manager = nipplejs.create({
         zone: document.body,
@@ -77,33 +72,22 @@
         color: 'blue',
       });
 
-      // Джойстик для перемещения
       manager.on('move', (evt, data) => {
         controls.moveX = data.vector.x * 0.1;
         controls.moveZ = -data.vector.y * 0.1;
       });
 
-      // Джойстик для вращения
-      manager.on('end', (evt, data) => {
-        controls.rotateY = data.angle.degree * 0.01;
-      });
-
-      // Инициализация перемещения и вращения на старте
-      manager.on('start', () => {
-        controls.moveX = 0;
-        controls.moveZ = 0;
+      manager.on('end', () => {
         controls.rotateY = 0;
       });
     }
 
-    // Обработка изменения размера окна
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Инициализация сцены
     init();
   </script>
 </body>
