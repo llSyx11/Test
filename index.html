@@ -13,9 +13,10 @@
       display: block;
     }
   </style>
+  <!-- Three.js основная библиотека -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Исправленный UMD-формат GLTFLoader -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- UMD-версия GLTFLoader для r128 -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
 <body>
@@ -30,17 +31,23 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
+      // Освещение
       const light = new THREE.AmbientLight(0x404040);
       scene.add(light);
 
-      // Теперь GLTFLoader доступен глобально
+      // Инициализация загрузчика
       const loader = new THREE.GLTFLoader();
-      loader.load('https://raw.githubusercontent.com/llSyx11/Test/main/001.glb', (gltf) => {
-        model = gltf.scene;
-        scene.add(model);
-      }, undefined, function(error) {
-        console.error('Ошибка загрузки модели:', error);
-      });
+      loader.load(
+        'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
+        (gltf) => {
+          model = gltf.scene;
+          scene.add(model);
+        },
+        undefined,
+        (error) => {
+          console.error('Ошибка загрузки модели:', error);
+        }
+      );
 
       camera.position.z = 5;
       initJoystick();
