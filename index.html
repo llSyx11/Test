@@ -8,7 +8,6 @@
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
         
-        /* Стили для мобильных элементов */
         .joystick {
             position: fixed;
             width: 120px;
@@ -20,7 +19,6 @@
         #leftJoystick { left: 30px; }
         #rightJoystick { right: 30px; }
 
-        /* Стили для десктоп элементов */
         .desktop-controls {
             position: fixed;
             bottom: 20px;
@@ -74,46 +72,12 @@
         let isMobile = /Mobi|Android/i.test(navigator.userAgent);
         let mouseDown = false;
         let lastMouseX = 0;
-        let deltaTime = 0;
         let lastTime = performance.now();
-
-        function init() {
-            // Инициализация сцены
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            // Освещение
-            const ambientLight = new THREE.AmbientLight(0x404040, 2);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(5, 5, 5);
-            scene.add(ambientLight, directionalLight);
-
-            // Загрузка модели
-            new THREE.GLTFLoader().load(
-                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
-                gltf => {
-                    model = gltf.scene;
-                    scene.add(model);
-                },
-                undefined,
-                error => console.error(error)
-            );
-
-            camera.position.set(0, 2, 5);
-            camera.lookAt(0, 1, 0);
-
-            initControls();
-            animate();
-        }
 
         function initControls() {
             if(isMobile) {
                 document.querySelector('.desktop-controls').style.display = 'none';
                 
-                // Левый джойстик (перемещение)
                 const leftJoystick = nipplejs.create({
                     zone: document.getElementById('leftJoystick'),
                     mode: 'static',
@@ -121,7 +85,6 @@
                     color: 'blue'
                 });
 
-                // Правый джойстик (вращение)
                 const rightJoystick = nipplejs.create({
                     zone: document.getElementById('rightJoystick'),
                     mode: 'static',
@@ -138,19 +101,16 @@
                     controls.rotateY = data.vector.x * controls.rotateSpeed;
                 });
 
-                leftJoystick.on('end', () => {
-                    controls.moveX = controls.moveZ = 0;
-                });
-                
-                rightJoystick.on('end', () => {
-                    controls.rotateY = 0;
-                });
+                leftJoystick.on('end', () => controls.moveX = controls.moveZ = 0);
+                rightJoystick.on('end', () => controls.rotateY = 0);
             } else {
                 document.querySelectorAll('.joystick').forEach(el => el.remove());
-                
                 const keyState = {};
-                window.addEventListener('keydown', e => keyState[e.key.toLowerCase()] = true);
-                window.addEventListener('keyup', e => keyState[e.key.toLowerCase()] = false);
+                
+                window.addEventListener('keydown', e => 
+                    keyState[e.key.toLowerCase()] = true);
+                window.addEventListener('keyup', e => 
+                    keyState[e.key.toLowerCase()] = false);
 
                 renderer.domElement.addEventListener('mousedown', e => {
                     mouseDown = true;
@@ -166,18 +126,41 @@
                 
                 window.addEventListener('mouseup', () => mouseDown = false);
 
-                const updateKeys = () => {
+                setInterval(() => {
                     controls.moveX = (keyState['d'] ? 1 : 0) - (keyState['a'] ? 1 : 0);
                     controls.moveZ = (keyState['w'] ? 1 : 0) - (keyState['s'] ? 1 : 0);
-                };
-                setInterval(updateKeys, 16);
+                }, 16);
             }
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            scene.add(
+                new THREE.AmbientLight(0x404040, 2),
+                new THREE.DirectionalLight(0xffffff, 1).position.set(5, 5, 5)
+            );
+
+            new THREE.GLTFLoader().load(
+                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
+                gltf => scene.add(model = gltf.scene),
+                undefined,
+                error => console.error(error)
+            );
+
+            camera.position.set(0, 2, 5).lookAt(0, 1, 0);
+            initControls();
+            animate();
         }
 
         function animate(timestamp) {
             requestAnimationFrame(animate);
             
-            deltaTime = (timestamp - lastTime) / 1000;
+            const deltaTime = (timestamp - lastTime) / 1000;
             lastTime = timestamp;
 
             if(model) {
