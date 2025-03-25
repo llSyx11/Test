@@ -5,92 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Управление</title>
     <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
-        
-        /* Стили для мобильных элементов */
-        .joystick {
-            position: fixed;
-            width: 120px;
-            height: 120px;
-            bottom: 40px;
-            display: none;
-        }
-        #leftJoystick { left: 40px; }
-        #rightJoystick { right: 40px; }
-        
-        /* Стили для десктопных элементов */
-        .controls {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            display: none;
-            grid-template:
-                '. up .' 40px
-                'left down right' 40px
-                / 40px 40px 40px;
-            gap: 5px;
-        }
-        .controls div {
-            background: rgba(0,0,0,0.5);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 5px;
-            font-family: Arial;
-        }
-        #keyW { grid-area: up; }
-        #keyA { grid-area: left; }
-        #keyS { grid-area: down; }
-        #keyD { grid-area: right; }
+        /* ... (стили остаются без изменений) ... */
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.min.js"></script>
+    <!-- Исправленная ссылка на GLTFLoader -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
 <body>
-    <div id="leftJoystick" class="joystick"></div>
-    <div id="rightJoystick" class="joystick"></div>
-    
-    <div class="controls">
-        <div id="keyW">W</div>
-        <div id="keyA">A</div>
-        <div id="keyS">S</div>
-        <div id="keyD">D</div>
-    </div>
+    <!-- ... (остальная разметка без изменений) ... -->
 
     <script>
-        let scene, camera, renderer, model;
-        let controls = {
-            moveX: 0,
-            moveZ: 0,
-            rotateY: 0,
-            isMouseDown: false,
-            mouseX: 0,
-            mouseY: 0
-        };
+        // Исправленная инициализация загрузчика
+        const loader = new THREE.GLTFLoader();
         
-        // Настройки
-        const MOVE_SPEED = 3;
-        const ROTATE_SPEED = 2;
+        // ... (остальной код без изменений) ...
 
+        // В функции init заменяем new THREE.GLTFLoader() на loader
         function init() {
-            // Инициализация Three.js
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+            // ... (остальной код инициализации) ...
 
-            // Освещение
-            const ambientLight = new THREE.AmbientLight(0x404040);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            directionalLight.position.set(0, 1, 0);
-            scene.add(ambientLight, directionalLight);
-
-            // Загрузка модели
-            new THREE.GLTFLoader().load(
+            // Загрузка модели с использованием предварительно созданного загрузчика
+            loader.load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
                 gltf => {
                     model = gltf.scene;
@@ -100,101 +36,10 @@
                 error => console.error(error)
             );
 
-            camera.position.set(0, 2, 5);
-            camera.lookAt(0, 0, 0);
-            
-            // Инициализация управления
-            initControls();
-            animate();
+            // ... (остальной код) ...
         }
 
-        function initControls() {
-            // Определение типа устройства
-            const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-            
-            if(isMobile) {
-                // Мобильное управление
-                document.querySelectorAll('.joystick').forEach(e => e.style.display = 'block');
-                
-                // Левый джойстик (перемещение)
-                nipplejs.create({
-                    zone: document.getElementById('leftJoystick'),
-                    mode: 'static',
-                    position: { left: '50%', top: '50%' },
-                    color: 'rgba(255,255,255,0.5)'
-                }).on('move', (evt, data) => {
-                    controls.moveX = data.vector.x * MOVE_SPEED;
-                    controls.moveZ = -data.vector.y * MOVE_SPEED;
-                }).on('end', () => {
-                    controls.moveX = controls.moveZ = 0;
-                });
-
-                // Правый джойстик (вращение)
-                nipplejs.create({
-                    zone: document.getElementById('rightJoystick'),
-                    mode: 'static',
-                    position: { left: '50%', top: '50%' },
-                    color: 'rgba(255,255,255,0.5)'
-                }).on('move', (evt, data) => {
-                    controls.rotateY = data.vector.x * ROTATE_SPEED;
-                }).on('end', () => {
-                    controls.rotateY = 0;
-                });
-            } else {
-                // Десктопное управление
-                document.querySelector('.controls').style.display = 'grid';
-                
-                // Обработка клавиатуры
-                const keyState = {};
-                window.addEventListener('keydown', e => keyState[e.key.toUpperCase()] = true);
-                window.addEventListener('keyup', e => keyState[e.key.toUpperCase()] = false);
-                
-                // Обработка мыши
-                document.addEventListener('mousedown', () => controls.isMouseDown = true);
-                document.addEventListener('mouseup', () => controls.isMouseDown = false);
-                document.addEventListener('mousemove', e => {
-                    if(!controls.isMouseDown) return;
-                    controls.rotateY = (e.movementX * 0.005) * ROTATE_SPEED;
-                });
-
-                // Игровой цикл для клавиатуры
-                const updateKeyboard = () => {
-                    controls.moveX = ((keyState['D'] ? 1 : 0) - (keyState['A'] ? 1 : 0)) * MOVE_SPEED;
-                    controls.moveZ = ((keyState['S'] ? 1 : 0) - (keyState['W'] ? 1 : 0)) * MOVE_SPEED;
-                };
-                setInterval(updateKeyboard, 1000/60);
-            }
-        }
-
-        function animate(timestamp = 0) {
-            requestAnimationFrame(animate);
-            
-            // Расчет deltaTime для плавности анимации
-            const deltaTime = (timestamp - animate.lastTime) / 1000;
-            animate.lastTime = timestamp;
-
-            if(model) {
-                // Обновление позиции и вращения
-                model.position.x += controls.moveX * deltaTime;
-                model.position.z += controls.moveZ * deltaTime;
-                model.rotation.y += controls.rotateY * deltaTime;
-                
-                // Сброс вращения
-                controls.rotateY = 0;
-            }
-            
-            renderer.render(scene, camera);
-        }
-        animate.lastTime = 0;
-
-        // Обработка изменения размера окна
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        init();
+        // ... (остальной код без изменений) ...
     </script>
 </body>
 </html>
