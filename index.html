@@ -14,8 +14,8 @@
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Загружаем правильный путь для GLTFLoader -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/loaders/GLTFLoader.js"></script>
+  <!-- Используем правильный путь для GLTFLoader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/jsm/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
 <body>
@@ -35,7 +35,7 @@
       const light = new THREE.AmbientLight(0x404040); // soft white light
       scene.add(light);
 
-      // Загрузка модели (заменяем путь на ваш реальный URL)
+      // Загрузка модели
       const loader = new THREE.GLTFLoader();
       loader.load('https://raw.githubusercontent.com/llSyx11/Test/main/001.glb', (gltf) => {
         model = gltf.scene;
@@ -60,4 +60,43 @@
       // Перемещение модели
       if (model) {
         model.rotation.y += controls.rotateY;
-        model
+        model.position.x += controls.moveX;
+        model.position.z += controls.moveZ;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Инициализация джойстиков
+    function initJoystick() {
+      const manager = nipplejs.create({
+        zone: document.body,
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: 'blue',
+      });
+
+      // Джойстик для перемещения
+      manager.on('move', (evt, data) => {
+        controls.moveX = data.vector.x * 0.1;
+        controls.moveZ = -data.vector.y * 0.1;
+      });
+
+      // Джойстик для вращения
+      manager.on('end', (evt, data) => {
+        controls.rotateY = data.angle.degree * 0.01;
+      });
+    }
+
+    // Обработка изменения размера окна
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Инициализация сцены
+    init();
+  </script>
+</body>
+</html>
