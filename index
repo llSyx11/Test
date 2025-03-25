@@ -1,51 +1,86 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D модель на Google Диск</title>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Модель с Джойстиками</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+  <!-- Загружаем библиотеки Three.js и GLTFLoader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- GLTFLoader нужно подключить отдельно -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/js/loaders/GLTFLoader.js"></script>
+  <script>
+    let scene, camera, renderer, model;
+    let controls = { moveX: 0, moveZ: 0, rotateY: 0 };
 
-    <script>
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+    // Инициализация сцены
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
 
-        // Ссылка на модель, размещенную на Google Диске
-        const modelUrl = 'https://drive.google.com/uc?export=download&id=YOUR_FILE_ID'; // замените YOUR_FILE_ID на ID вашего файла
+      // Свет
+      const light = new THREE.AmbientLight(0x404040); // мягкий белый свет
+      scene.add(light);
 
-        const loader = new THREE.GLTFLoader();
-        loader.load(modelUrl, function(gltf) {
-            const model = gltf.scene;
-            scene.add(model);
-            model.scale.set(0.5, 0.5, 0.5);  // Масштаб модели
+      // Загрузка модели (используем правильный URL на GitHub Pages)
+      const loader = new THREE.GLTFLoader();
+      loader.load('https://raw.githubusercontent.com/llSyx11/Test/main/001.glb', (gltf) => {
+        model = gltf.scene;
+        scene.add(model);
+      }, undefined, function (error) {
+        console.error(error);
+      });
 
-            animate();
-        }, undefined, function(error) {
-            console.error(error);
-        });
+      // Камера
+      camera.position.z = 5;
 
-        camera.position.z = 3;
+      // Инициализация джойстиков
+      initJoystick();
 
-        window.addEventListener('resize', () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        });
+      animate();
+    }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
-    </script>
-</body>
-</html>
+    // Анимация
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Перемещение модели
+      if (model) {
+        model.rotation.y += controls.rotateY; // вращение модели
+        model.position.x += controls.moveX;   // перемещение по оси X
+        model.position.z += controls.moveZ;   // перемещение по оси Z
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Инициализация джойстиков
+    function initJoystick() {
+      const manager = nipplejs.create({
+        zone: document.body,
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: 'blue',
+      });
+
+      // Джойстик для перемещения
+      manager.on('move', (evt, data) => {
+        controls.moveX = data.vector.x * 0.1;
+        controls.moveZ = -data.vector.y * 0.1;
+      });
+
+      // Джойстик для вращения
