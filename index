@@ -13,9 +13,9 @@
       display: block;
     }
   </style>
-  <!-- Загружаем библиотеки Three.js и GLTFLoader -->
+  <!-- Загружаем библиотеки Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- GLTFLoader нужно подключить отдельно -->
+  <!-- Загрузчик GLTF, используя версию r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
@@ -84,3 +84,27 @@
       });
 
       // Джойстик для вращения
+      manager.on('end', (evt, data) => {
+        controls.rotateY = data.angle.degree * 0.01;
+      });
+
+      // Инициализация перемещения и вращения на старте
+      manager.on('start', () => {
+        controls.moveX = 0;
+        controls.moveZ = 0;
+        controls.rotateY = 0;
+      });
+    }
+
+    // Обработка изменения размера окна
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Инициализация сцены
+    init();
+  </script>
+</body>
+</html>
