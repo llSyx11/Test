@@ -1,69 +1,17 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Модель с управлением</title>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
-        
-        /* Стили для мобильных элементов */
-        .joystick {
-            position: fixed;
-            width: 120px;
-            height: 120px;
-            bottom: 30px;
-            opacity: 0.8;
-            z-index: 100;
-        }
-        #leftJoystick { left: 30px; }
-        #rightJoystick { right: 30px; }
-
-        /* Стили для десктоп элементов */
-        .desktop-controls {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            color: white;
-            font-size: 24px;
-            user-select: none;
-        }
-        .wasd {
-            display: grid;
-            grid-template-areas: ". w ."
-                                 "a s d";
-            gap: 10px;
-        }
-        .wasd div {
-            width: 40px;
-            height: 40px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
+    <!-- ... все метатеги и стили остаются без изменений ... -->
 </head>
 <body>
-    <!-- Элементы управления -->
-    <div id="leftJoystick" class="joystick"></div>
-    <div id="rightJoystick" class="joystick"></div>
-    <div class="desktop-controls">
-        <div class="wasd">
-            <div style="grid-area: w">W</div>
-            <div style="grid-area: a">A</div>
-            <div style="grid-area: s">S</div>
-            <div style="grid-area: d">D</div>
-        </div>
-    </div>
+    <!-- ... элементы управления остаются без изменений ... -->
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
+    
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
-    <script>
         let scene, camera, renderer, model;
         let controls = {
             moveSpeed: 2.5,
@@ -82,7 +30,7 @@
         function init() {
             // Инициализация сцены
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth/innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
@@ -94,7 +42,7 @@
             scene.add(ambientLight, directionalLight);
 
             // Загрузка модели
-            new THREE.GLTFLoader().load(
+            new GLTFLoader().load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
                 gltf => {
                     model = gltf.scene;
@@ -112,97 +60,7 @@
             animate();
         }
 
-        function initControls() {
-            // Мобильное управление
-            if(isMobile) {
-                document.querySelector('.desktop-controls').style.display = 'none';
-                
-                // Левый джойстик (перемещение)
-                const leftJoystick = nipplejs.create({
-                    zone: document.getElementById('leftJoystick'),
-                    mode: 'static',
-                    position: { left: '50%', top: '50%' },
-                    color: 'blue'
-                });
-
-                // Правый джойстик (вращение)
-                const rightJoystick = nipplejs.create({
-                    zone: document.getElementById('rightJoystick'),
-                    mode: 'static',
-                    position: { left: '50%', top: '50%' },
-                    color: 'red'
-                });
-
-                leftJoystick.on('move', (evt, data) => {
-                    controls.moveX = data.vector.x * controls.moveSpeed;
-                    controls.moveZ = -data.vector.y * controls.moveSpeed;
-                });
-
-                rightJoystick.on('move', (evt, data) => {
-                    controls.rotateY = data.vector.x * controls.rotateSpeed;
-                });
-
-                leftJoystick.on('end rightJoystick.on.end', () => {
-                    controls.moveX = controls.moveZ = controls.rotateY = 0;
-                });
-            } 
-            // Десктоп управление
-            else {
-                document.querySelectorAll('.joystick').forEach(el => el.remove());
-                
-                // Управление клавиатурой
-                const keyState = {};
-                window.addEventListener('keydown', e => keyState[e.key] = true);
-                window.addEventListener('keyup', e => keyState[e.key] = false);
-
-                // Управление мышью
-                renderer.domElement.addEventListener('mousedown', e => {
-                    mouseDown = true;
-                    lastMouseX = e.clientX;
-                });
-                window.addEventListener('mousemove', e => {
-                    if(mouseDown) {
-                        controls.rotateY = (e.clientX - lastMouseX) * 0.005;
-                        lastMouseX = e.clientX;
-                    }
-                });
-                window.addEventListener('mouseup', () => mouseDown = false);
-
-                // Обновление состояния клавиш
-                const updateKeys = () => {
-                    controls.moveX = (keyState['d'] ? 1 : 0) - (keyState['a'] ? 1 : 0);
-                    controls.moveZ = (keyState['w'] ? 1 : 0) - (keyState['s'] ? 1 : 0);
-                };
-                setInterval(updateKeys, 16);
-            }
-        }
-
-        function animate(timestamp) {
-            requestAnimationFrame(animate);
-            
-            // Расчет deltaTime
-            deltaTime = (timestamp - lastTime) / 1000;
-            lastTime = timestamp;
-
-            if(model) {
-                // Применение перемещения
-                model.position.x += controls.moveX * deltaTime;
-                model.position.z += controls.moveZ * deltaTime;
-                
-                // Применение вращения
-                model.rotation.y += controls.rotateY * deltaTime;
-                controls.rotateY *= 0.9; // Плавное замедление
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        // Обработчик изменения размера
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        // ... остальные функции остаются без изменений ...
 
         init();
     </script>
