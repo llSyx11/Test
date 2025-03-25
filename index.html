@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>https://github.com/llSyx11/Test/blob/main/001.glb</title>
+    <title>3D модель на GitHub Pages</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -20,8 +20,8 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Ссылка на модель, размещенную на Google Диске
-        const modelUrl = 'https://github.com/llSyx11/Test/blob/main/001.glb'; // замените YOUR_FILE_ID на ID вашего файла
+        // Прямая ссылка на модель, размещенную в репозитории GitHub
+        const modelUrl = 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb'; // правильный URL
 
         const loader = new THREE.GLTFLoader();
         loader.load(modelUrl, function(gltf) {
