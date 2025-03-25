@@ -3,43 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Управление</title>
+    <title>3D Модель с управлением</title>
     <style>
-        /* ... (стили остаются без изменений) ... */
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        
+        /* Стили для джойстиков */
+        .joystick {
+            position: fixed;
+            width: 120px;
+            height: 120px;
+            bottom: 30px;
+            opacity: 0.7;
+        }
+        #leftJoystick { left: 30px; }
+        #rightJoystick { right: 30px; }
+        
+        /* Стили для кнопок ПК */
+        .pc-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            gap: 10px;
+            font-size: 24px;
+            color: white;
+            text-shadow: 0 0 5px black;
+        }
     </style>
+    
+    <!-- Three.js и зависимости -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Исправленная ссылка на GLTFLoader -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
 <body>
-    <!-- ... (остальная разметка без изменений) ... -->
+    <div class="pc-controls">
+        <div style="grid-column: 2">W</div>
+        <div style="grid-column: 1">A</div>
+        <div style="grid-column: 2">S</div>
+        <div style="grid-column: 3">D</div>
+    </div>
 
     <script>
-        // Исправленная инициализация загрузчика
-        const loader = new THREE.GLTFLoader();
-        
-        // ... (остальной код без изменений) ...
+        let scene, camera, renderer, model;
+        let controls = { 
+            moveX: 0, 
+            moveZ: 0, 
+            rotateY: 0,
+            moveSpeed: 3, // Скорость движения
+            rotateSpeed: 2 // Скорость вращения
+        };
+        let prevTime = performance.now();
+        let isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-        // В функции init заменяем new THREE.GLTFLoader() на loader
         function init() {
-            // ... (остальной код инициализации) ...
+            // Инициализация сцены
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-            // Загрузка модели с использованием предварительно созданного загрузчика
-            loader.load(
+            // Освещение
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(0, 1, 0);
+            scene.add(directionalLight);
+
+            // Загрузка модели
+            new THREE.GLTFLoader().load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
-                gltf => {
+                (gltf) => {
                     model = gltf.scene;
                     scene.add(model);
                 },
                 undefined,
-                error => console.error(error)
+                (error) => console.error('Ошибка загрузки модели:', error)
             );
 
-            // ... (остальной код) ...
+            camera.position.set(0, 2, 5);
+            camera.lookAt(0, 0, 0);
+
+            // Инициализация управления
+            initControls();
+            animate();
+
+            // Обработчик изменения размера окна
+            window.addEventListener('resize', onWindowResize);
         }
 
-        // ... (остальной код без изменений) ...
-    </script>
-</body>
-</html>
+        function initControls() {
+            if(isMobile) {
+                // Мобильные джойстики
+                createJoystick('leftJoystick', 'move');
+                createJoystick('rightJoystick', 'rotate');
+            } else {
+                // ПК управление
+                document.querySelector('.pc-controls').style.display = 'grid';
+                initKeyboard();
+                initMouse();
+            }
+        }
+
+        function createJoystick(id, type) {
+            const zone = document.createElement('div');
+            zone.id = id;
+            zone.className = 'joystick';
+            document.body.appendChild(zone);
+
+            const manager = nipplejs.create({
+                zone: zone,
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'rgba(100, 100, 255, 0.5)'
+            });
+
+            manager.on('move', (evt, data) => {
+                if(type === 'move') {
+                    controls.moveX = data.vector.x * controls.moveSpeed;
+                    controls.moveZ = -data.vector.y * controls.moveSpeed;
+                } else {
+                    controls.rotateY = data.vector.x * controls.rotateSpeed;
+                }
+            });
+
+            manager.on('end', () => {
+                if(type === 'move') {
+                    controls.moveX = 0;
+                    controls.moveZ = 0;
+                } else {
+                    controls.rotateY = 0;
+                }
+            });
+        }
+
+        function initKeyboard() {
+            const keyState = {};
+            
+            window.addEventListener('keydown', e => keyState[e.key.toUpperCase()] = true);
+            window.addEventListener('keyup', e => keyState[e.key.toUpperCase()] = false);
+
+            // Обновление состояния управления
+            const updateControls = () => {
+                controls.moveX = 0;
+                controls.moveZ = 0;
+                
+                if(keyState['W']) controls.moveZ = -controls.moveSpeed;
+                if(keyState['S']) controls.moveZ = controls.moveSpeed;
+                if(keyState['A']) controls.moveX = -controls.moveSpeed;
+                if(keyState['D']) controls.moveX = controls.moveSpeed;
+            };
+            
+            setInterval(updateControls, 1000/60);
+        }
+
+        function initMouse() {
+            let isDragging = false;
+            let lastX = 0;
+            
+            document.addEventListener('mousedown', e => {
+                isDragging = true;
+                lastX = e.clientX;
+            });
+            
+            document.addEventListener('mousemove', e => {
+                if(isDragging && model) {
+                    const delta = e.clientX - lastX;
+                    model.rotation.y += delta * 0.01;
+                    lastX = e.clientX;
+                }
+            });
+            
+            document.addEventListener('mouseup', () => isDragging = false);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+            const deltaTime = (time - prevTime) / 1000;
+            prevTime = time;
+
+            if(model) {
+                model.position.x += controls.moveX * delta
