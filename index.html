@@ -1,108 +1,209 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
     <title>3D Model Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        body { 
+            margin: 0; 
+            overflow: hidden;
+            touch-action: none;
+            font-family: Arial, sans-serif;
+        }
+        canvas { 
+            display: block; 
+        }
+        /* Мобильные джойстики */
+        #joystickContainer {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            display: none; /* По умолчанию скрыты */
+        }
+        .joystick {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            margin: 0 20px;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            pointer-events: auto;
+        }
+        /* Десктоп элементы */
+        #desktopControls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            text-shadow: 1px 1px 2px black;
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <div id="joystickContainer">
+        <div id="leftJoystick" class="joystick"></div>
+        <div id="rightJoystick" class="joystick"></div>
+    </div>
+    <div id="desktopControls">W A S D</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.156.3/build/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+
     <script>
-        // Загрузка Three.js
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        let scene, camera, renderer, model;
+        let moveVelocity = new THREE.Vector3();
+        let rotationVelocity = new THREE.Vector2();
+        const MOVE_SPEED = 2.5;
+        const ROTATION_SPEED = 3.0;
+        let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        let mouseDown = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        const keys = { w: false, a: false, s: false, d: false };
 
-        // Загрузка модели GLB
-        fetch('https://raw.githubusercontent.com/llSyx11/Test/main/001.glb')
-            .then(response => response.blob())
-            .then(blob => {
-                const loader = new THREE.GLTFLoader();
-                loader.load(blob, (glTF) => {
-                    // Получение модели из GLB
-                    const model = glTF.scene;
+        function init() {
+            // Инициализация сцены
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
 
-                    // Установка камеры и освещения
-                    camera.position.z = 5;
-                    camera.position.y = 2; // немного поднять камеру
-                    camera.rotation.x = -Math.PI / 4; // Поворот камеры для лучшего обзора
-                    camera.rotation.z = Math.PI / 4;
+            // Освещение
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 2, 3);
+            scene.add(directionalLight);
 
-                    // Добавление освещения
-                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-                    scene.add(ambientLight);
-
-                    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-                    directionalLight.position.set(1, 1, 1); // Направленный свет
-                    scene.add(directionalLight);
-
-
-                    // Добавление модели в сцену
+            // Загрузка модели
+            new THREE.GLTFLoader().load(
+                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
+                gltf => {
+                    model = gltf.scene;
+                    model.scale.set(1, 1, 1);
                     scene.add(model);
+                },
+                undefined,
+                error => console.error(error)
+            );
 
-                    // Установка рендерера
-                    renderer.render(scene, camera);
+            camera.position.set(0, 1.5, 5);
+            setupControls();
+            animate();
+        }
 
-                    // Обработчики ввода (джойстики) -  ОЧЕНЬ упрощенный пример!
-                    let moveX = 0;
-                    let moveY = 0;
-                    let rotateX = 0;
-                    let rotateY = 0;
+        function setupControls() {
+            // Мобильные элементы
+            if(isMobile) {
+                document.getElementById('joystickContainer').style.display = 'flex';
+                initMobileJoysticks();
+            } 
+            // Десктоп элементы
+            else {
+                document.getElementById('desktopControls').style.display = 'block';
+                initDesktopControls();
+            }
+        }
 
-
-                    document.addEventListener('keydown', function(event) {
-                        if (event.key === 'ArrowLeft') {
-                            moveX -= 0.1;
-                        }
-                        if (event.key === 'ArrowRight') {
-                            moveX += 0.1;
-                        }
-                        if (event.key === 'ArrowUp') {
-                            moveY += 0.1;
-                        }
-                        if (event.key === 'ArrowDown') {
-                            moveY -= 0.1;
-                        }
-                        if (event.key === 'a') {
-                            rotateX -= 0.02;
-                        }
-                        if (event.key === 'd') {
-                            rotateX += 0.02;
-                        }
-                        if (event.key === 'w') {
-                            rotateY -= 0.02;
-                        }
-                        if (event.key === 's') {
-                            rotateY += 0.02;
-                        }
-                    });
-
-                    // Функция для обновления положения модели
-                    function updateModelPosition() {
-                        model.position.x += moveX;
-                        model.position.y += moveY;
-                        model.rotation.x += rotateX;
-                        model.rotation.y += rotateY;
-                    }
-
-
-                    // Обновление позиции модели каждые 16 мс (примерно 60 кадров в секунду)
-                    setInterval(updateModelPosition, 16);
-
-                })
-                .catch(error => console.error('Ошибка загрузки модели:', error));
-            })
-            .finally(() => {
-                // Очистка после завершения загрузки (необязательно)
-                renderer.dispose();
+        function initMobileJoysticks() {
+            const leftJoystick = nipplejs.create({
+                zone: document.getElementById('leftJoystick'),
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'white',
+                size: 60
             });
-    </script>
 
+            const rightJoystick = nipplejs.create({
+                zone: document.getElementById('rightJoystick'),
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'white',
+                size: 60
+            });
+
+            leftJoystick.on('move', (evt, data) => {
+                moveVelocity.set(-data.vector.x, 0, -data.vector.y).multiplyScalar(MOVE_SPEED);
+            }).on('end', () => moveVelocity.set(0, 0, 0));
+
+            rightJoystick.on('move', (evt, data) => {
+                rotationVelocity.set(data.vector.x, data.vector.y).multiplyScalar(ROTATION_SPEED);
+            }).on('end', () => rotationVelocity.set(0, 0));
+        }
+
+        function initDesktopControls() {
+            // Обработка клавиатуры
+            window.addEventListener('keydown', e => {
+                if(e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = true;
+            });
+            window.addEventListener('keyup', e => {
+                if(e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = false;
+            });
+
+            // Обработка мыши
+            renderer.domElement.addEventListener('mousedown', e => {
+                mouseDown = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+            window.addEventListener('mousemove', e => {
+                if(mouseDown) {
+                    rotationVelocity.x = (e.clientX - lastMouseX) * 0.01;
+                    rotationVelocity.y = (e.clientY - lastMouseY) * 0.01;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            });
+            window.addEventListener('mouseup', () => {
+                mouseDown = false;
+                rotationVelocity.set(0, 0);
+            });
+        }
+
+        let lastTime = 0;
+        function animate(time = 0) {
+            requestAnimationFrame(animate);
+            const deltaTime = (time - lastTime) / 1000;
+            lastTime = time;
+
+            // Обработка движения для десктопа
+            if(!isMobile) {
+                moveVelocity.set(0, 0, 0);
+                if(keys.w) moveVelocity.z = -MOVE_SPEED;
+                if(keys.s) moveVelocity.z = MOVE_SPEED;
+                if(keys.a) moveVelocity.x = -MOVE_SPEED;
+                if(keys.d) moveVelocity.x = MOVE_SPEED;
+            }
+
+            if(model) {
+                // Применяем движение с учетом deltaTime
+                model.position.add(moveVelocity.clone().multiplyScalar(deltaTime));
+                model.rotation.y += rotationVelocity.x * deltaTime;
+                model.rotation.x += rotationVelocity.y * deltaTime;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Обработка изменения размеров
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Инициализация
+        init();
+    </script>
 </body>
 </html>
