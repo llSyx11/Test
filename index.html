@@ -56,11 +56,17 @@
         </div>
     </div>
 
+    <!-- Исправленные зависимости -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
 
     <script>
+        // Инициализация Three.js компонентов
+        const { Scene, PerspectiveCamera, WebGLRenderer, 
+                AmbientLight, DirectionalLight } = THREE;
+        const GLTFLoader = THREE.GLTFLoader;
+
         let scene, camera, renderer, model;
         let controls = {
             moveSpeed: 2.5,
@@ -73,6 +79,42 @@
         let mouseDown = false;
         let lastMouseX = 0;
         let lastTime = performance.now();
+
+        function init() {
+            // Инициализация сцены
+            scene = new Scene();
+            camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new WebGLRenderer({ 
+                antialias: true, 
+                alpha: true 
+            });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Освещение
+            scene.add(
+                new AmbientLight(0x404040, 2),
+                new DirectionalLight(0xffffff, 1).position.set(5, 5, 5)
+            );
+
+            // Загрузка модели
+            new GLTFLoader().load(
+                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
+                gltf => {
+                    model = gltf.scene;
+                    scene.add(model);
+                },
+                undefined,
+                error => console.error(error)
+            );
+
+            camera.position.set(0, 2, 5);
+            camera.lookAt(0, 1, 0);
+
+            initControls();
+            animate();
+        }
 
         function initControls() {
             if(isMobile) {
@@ -126,35 +168,12 @@
                 
                 window.addEventListener('mouseup', () => mouseDown = false);
 
-                setInterval(() => {
+                const updateKeys = () => {
                     controls.moveX = (keyState['d'] ? 1 : 0) - (keyState['a'] ? 1 : 0);
                     controls.moveZ = (keyState['w'] ? 1 : 0) - (keyState['s'] ? 1 : 0);
-                }, 16);
+                };
+                setInterval(updateKeys, 16);
             }
-        }
-
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            scene.add(
-                new THREE.AmbientLight(0x404040, 2),
-                new THREE.DirectionalLight(0xffffff, 1).position.set(5, 5, 5)
-            );
-
-            new THREE.GLTFLoader().load(
-                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
-                gltf => scene.add(model = gltf.scene),
-                undefined,
-                error => console.error(error)
-            );
-
-            camera.position.set(0, 2, 5).lookAt(0, 1, 0);
-            initControls();
-            animate();
         }
 
         function animate(timestamp) {
@@ -173,12 +192,14 @@
             renderer.render(scene, camera);
         }
 
+        // Обработчики событий
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        // Инициализация приложения
         init();
     </script>
 </body>
