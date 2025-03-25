@@ -8,47 +8,72 @@
     body {
       margin: 0;
       overflow: hidden;
-      position: relative;
     }
+
     canvas {
       display: block;
     }
-    /* Стили для мобильных джойстиков */
-    #joystick-container {
+
+    /* Стиль джойстиков */
+    .joystick-container {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
+      width: 100px; /* Ширина контейнера для джойстика */
+      height: 100px; /* Высота контейнера для джойстика */
+      bottom: 20px; /* Позиция внизу экрана */
+      left: 20px; /* Позиция слева экрана */
     }
-    /* Для стилизации иконок WASD */
-    .wasd-buttons {
+
+    .joystick {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: #3498db;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .joystick::after {
+      content: '';
       position: absolute;
-      right: 10px;
-      bottom: 10px;
-      font-size: 24px;
-      color: white;
-      background-color: rgba(0, 0, 0, 0.5);
-      padding: 5px;
-      display: none; /* Скрываем на мобильных устройствах */
+      width: 16px;
+      height: 16px;
+      background-color: #2ecc71;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Иконки для компьютерного управления */
+    .icon {
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      margin-left: 10px;
     }
   </style>
+  <!-- Three.js основная библиотека -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- UMD-версия GLTFLoader для r128 -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.8.4/dist/nipplejs.min.js"></script>
 </head>
 <body>
-  <div id="joystick-container"></div>
-  <div class="wasd-buttons">
-    W A S D
+
+  <div class="joystick-container">
+    <div id="leftJoystick" class="joystick"></div>
+    <div id="rightJoystick" class="joystick"></div>
   </div>
+
+  <button id="wAButton" class="icon">W</button>
+  <button id="aButton" class="icon">A</button>
+  <button id="sButton" class="icon">S</button>
+  <button id="dButton" class="icon">D</button>
+
 
   <script>
     let scene, camera, renderer, model;
     let controls = { moveX: 0, moveZ: 0, rotateY: 0 };
-    let isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent); // Проверка на мобильное устройство
-    let keys = { W: false, A: false, S: false, D: false };
 
     function init() {
       scene = new THREE.Scene();
@@ -68,6 +93,9 @@
         (gltf) => {
           model = gltf.scene;
           scene.add(model);
+
+          // Установка начальной позиции модели
+          model.position.set(0, 2, -5); // Начальная позиция для лучшей видимости
         },
         undefined,
         (error) => {
@@ -76,117 +104,96 @@
       );
 
       camera.position.z = 5;
-      initControls();
+      initJoystick();
       animate();
     }
 
     function animate() {
       requestAnimationFrame(animate);
-
-      // Управление для мобильных устройств (джойстики)
-      if (isMobile) {
-        if (model) {
-          model.rotation.y += controls.rotateY;
-          model.position.x += controls.moveX;
-          model.position.z += controls.moveZ;
-        }
-      } else {
-        // Управление для ПК (клавиши WASD + мышь)
-        if (keys.W) controls.moveZ = -0.1;
-        if (keys.S) controls.moveZ = 0.1;
-        if (keys.A) controls.moveX = -0.1;
-        if (keys.D) controls.moveX = 0.1;
-        
-        if (model) {
-          model.rotation.y += controls.rotateY;
-          model.position.x += controls.moveX;
-          model.position.z += controls.moveZ;
-        }
+      if (model) {
+        model.rotation.y += controls.rotateY;
+        model.position.x += controls.moveX;
+        model.position.z += controls.moveZ;
       }
-
       renderer.render(scene, camera);
     }
 
-    function initControls() {
-      if (isMobile) {
-        initJoystick();
-      } else {
-        initKeyboardControls();
-        initMouseControls();
-      }
-
-      // Обновляем рендерер и камеру при изменении размера окна
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    }
-
-    // Инициализация джойстиков для мобильных устройств
     function initJoystick() {
-      const joystickContainer = document.getElementById('joystick-container');
-
-      // Левый джойстик для перемещения
-      const leftJoystick = nipplejs.create({
-        zone: joystickContainer,
+      const manager = nipplejs.create({
+        zone: document.body,
         mode: 'static',
-        position: { left: '10%', bottom: '10%' },
+        position: { left: '50%', top: '50%' },
         color: 'blue',
       });
 
-      leftJoystick.on('move', (evt, data) => {
+      manager.on('move', (evt, data) => {
         controls.moveX = data.vector.x * 0.1;
         controls.moveZ = -data.vector.y * 0.1;
       });
 
-      // Правый джойстик для вращения
-      const rightJoystick = nipplejs.create({
-        zone: joystickContainer,
-        mode: 'static',
-        position: { right: '10%', bottom: '10%' },
-        color: 'green',
-      });
-
-      rightJoystick.on('move', (evt, data) => {
-        controls.rotateY = data.vector.x * 0.02; // Поворот модели
-      });
-
-      rightJoystick.on('end', () => {
+      manager.on('end', () => {
         controls.rotateY = 0;
       });
     }
 
-    // Инициализация клавиш WASD для ПК
-    function initKeyboardControls() {
-      window.addEventListener('keydown', (event) => {
-        if (event.key === 'W') keys.W = true;
-        if (event.key === 'A') keys.A = true;
-        if (event.key === 'S') keys.S = true;
-        if (event.key === 'D') keys.D = true;
+    function handleKeyboardControls() {
+      document.addEventListener('keydown', (event) => {
+        switch (event.key) {
+          case 'w':
+            controls.moveX = 0.1;
+            break;
+          case 'a':
+            controls.moveZ = -0.1;
+            break;
+          case 's':
+            controls.moveX = -0.1;
+            break;
+          case 'd':
+            controls.moveZ = 0.1;
+            break;
+        }
       });
 
-      window.addEventListener('keyup', (event) => {
-        if (event.key === 'W') keys.W = false;
-        if (event.key === 'A') keys.A = false;
-        if (event.key === 'S') keys.S = false;
-        if (event.key === 'D') keys.D = false;
+      document.addEventListener('keyup', (event) => {
+        switch (event.key) {
+          case 'w':
+            controls.moveX = 0;
+            break;
+          case 'a':
+            controls.moveZ = 0;
+            break;
+          case 's':
+            controls.moveX = 0;
+            break;
+          case 'd':
+            controls.moveZ = 0;
+            break;
+        }
       });
     }
 
-    // Инициализация мыши для вращения
-    function initMouseControls() {
-      let mouseX = 0;
-      let mouseY = 0;
+    function handleIconClicks() {
+      const wAButton = document.getElementById('wAButton');
+      const aButton = document.getElementById('aButton');
+      const sButton = document.getElementById('sButton');
+      const dButton = document.getElementById('dButton');
 
-      window.addEventListener('mousemove', (event) => {
-        mouseX = event.clientX;
-        mouseY = event.clientY;
-        controls.rotateY = (mouseX - window.innerWidth / 2) * 0.002; // Мышь управляет вращением
-      });
+      wAButton.addEventListener('click', () => { controls.moveX = 0.1; });
+      aButton.addEventListener('click', () => { controls.moveZ = -0.1; });
+      sButton.addEventListener('click', () => { controls.moveX = -0.1; });
+      dButton.addEventListener('click', () => { controls.moveZ = 0.1; });
     }
+
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
     init();
+    handleKeyboardControls();
+    handleIconClicks();
   </script>
 </body>
 </html>
