@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D модель на GitHub Pages</title>
+    <title>https://github.com/llSyx11/Test/blob/main/001.glb</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -20,14 +20,23 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Прямая ссылка на модель, размещенную в репозитории GitHub
-        const modelUrl = 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb'; // правильный URL
+        // Добавим освещение
+        const ambientLight = new THREE.AmbientLight(0x404040, 1); // мягкое освещение
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // направленный источник света
+        directionalLight.position.set(1, 1, 1).normalize();
+        scene.add(directionalLight);
+
+        // Ссылка на модель
+        const modelUrl = 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb';
 
         const loader = new THREE.GLTFLoader();
         loader.load(modelUrl, function(gltf) {
             const model = gltf.scene;
             scene.add(model);
             model.scale.set(0.5, 0.5, 0.5);  // Масштаб модели
+            model.position.set(0, -1, 0);  // Позиция модели в сцене
 
             animate();
         }, undefined, function(error) {
