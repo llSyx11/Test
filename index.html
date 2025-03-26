@@ -115,7 +115,7 @@
             });
 
             moveJoystick.on('move', (evt, data) => {
-                moveVector.set(data.vector.x, -data.vector.y); // W вперёд (уменьшает Z)
+                moveVector.set(data.vector.x, data.vector.y);
             });
 
             rotateJoystick.on('move', (evt, data) => {
@@ -168,20 +168,20 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Обновление движения для десктопа
-            if (!isMobile) {
+            // Update movement for desktop
+            if(!isMobile) {
                 moveVector.set(
                     (keyState['a'] ? -1 : (keyState['d'] ? 1 : 0)),  // X-ось: A - влево, D - вправо
-                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))   // Z-ось: W - вперёд, S - назад
+                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))   // Z-ось: W - вперёд (уменьшает Z), S - назад (увеличивает Z)
                 );
             }
 
-            if (model) {
-                // Обновление позиции
+            if(model) {
+                // Update position
                 model.position.x += moveVector.x * moveSpeed * delta;
-                model.position.z += moveVector.y * moveSpeed * delta; // Используем Z вместо Y
-
-                // Обновление вращения
+                model.position.z += moveVector.y * moveSpeed * delta;
+                
+                // Update rotation
                 model.rotation.y += rotateVector.x * rotateSpeed * delta;
             }
 
