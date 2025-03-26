@@ -47,7 +47,7 @@
         let moveSpeed = 3;
         let rotateSpeed = 2;
         let clock = new THREE.Clock();
-        let controls;
+        let keyState = {};
 
         init();
         animate();
@@ -102,14 +102,12 @@
             document.getElementById('joystick-container').style.display = 'block';
             document.getElementById('right-joystick').style.display = 'block';
 
-            // Movement joystick
             const moveJoystick = nipplejs.create({
                 zone: document.getElementById('joystick-container'),
                 mode: 'static',
                 position: { left: '50%', bottom: '50%' }
             });
 
-            // Rotation joystick
             const rotateJoystick = nipplejs.create({
                 zone: document.getElementById('right-joystick'),
                 mode: 'static',
@@ -155,22 +153,28 @@
             });
 
             // Keyboard controls
-            const keyState = {};
-            window.addEventListener('keydown', e => keyState[e.key.toLowerCase()] = true);
-            window.addEventListener('keyup', e => keyState[e.key.toLowerCase()] = false);
+            window.addEventListener('keydown', e => {
+                const key = e.key.toLowerCase();
+                if(['w','a','s','d'].includes(key)) keyState[key] = true;
+            });
             
-            // Update movement vector
-            const updateMoveVector = () => {
-                moveVector.set(
-                    (keyState['a'] ? -1 : keyState['d'] ? 1 : 0),
-                    (keyState['s'] ? -1 : keyState['w'] ? 1 : 0)
-                );
-            };
+            window.addEventListener('keyup', e => {
+                const key = e.key.toLowerCase();
+                if(['w','a','s','d'].includes(key)) keyState[key] = false;
+            });
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
+
+            // Update movement for desktop
+            if(!isMobile) {
+                moveVector.set(
+                    (keyState['a'] ? -1 : (keyState['d'] ? 1 : 0)),
+                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))
+                );
+            }
 
             if(model) {
                 // Update position
