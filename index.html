@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FPS Camera</title>
+    <title>3D FPS Camera</title>
     <style>
         * { margin: 0; padding: 0; }
         canvas { display: block; }
+        body { overflow: hidden; background-color: black; }
         .keyboard-controls {
             position: fixed;
             bottom: 30px;
@@ -20,7 +21,7 @@
     </style>
 </head>
 <body>
-    <div class="keyboard-controls">W A S D - перемещение</div>
+    <div class="keyboard-controls">W A S D для движения, мышь для обзора</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -28,12 +29,11 @@
     <script>
         let scene, camera, renderer;
         let moveVector = new THREE.Vector2();
-        let isDragging = false;
-        let prevMouseX = 0, prevMouseY = 0;
-        let moveSpeed = 3;
-        let lookSpeed = 0.002;
         let keyState = {};
+        let moveSpeed = 5;
+        let sensitivity = 0.002;
         let clock = new THREE.Clock();
+        let isPointerLocked = false;
 
         init();
         animate();
@@ -49,22 +49,22 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambient);
-
-            const directional = new THREE.DirectionalLight(0xffffff, 0.8);
-            directional.position.set(5, 5, 5);
-            scene.add(directional);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
 
             new THREE.GLTFLoader().load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
                 gltf => {
-                    const model = gltf.scene;
+                    let model = gltf.scene;
                     model.scale.set(2, 2, 2);
                     scene.add(model);
                 },
                 undefined,
-                error => console.error('Error loading model:', error)
+                error => console.error('Ошибка загрузки модели:', error)
             );
 
             setupControls();
@@ -77,37 +77,31 @@
         }
 
         function setupControls() {
-            document.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
+            document.body.addEventListener('click', () => {
+                if (!isPointerLocked) {
+                    document.body.requestPointerLock();
+                }
             });
 
-            document.addEventListener('mouseup', () => {
-                isDragging = false;
+            document.addEventListener('pointerlockchange', () => {
+                isPointerLocked = document.pointerLockElement === document.body;
             });
 
             document.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
+                if (!isPointerLocked) return;
 
-                const deltaX = e.clientX - prevMouseX;
-                const deltaY = e.clientY - prevMouseY;
+                camera.rotation.y -= e.movementX * sensitivity;
+                camera.rotation.x -= e.movementY * sensitivity;
 
-                camera.rotation.y -= deltaX * lookSpeed;
-                camera.rotation.x -= deltaY * lookSpeed;
-
-                // Ограничение поворота камеры по X (чтобы не переворачивалась)
+                // Ограничиваем наклон камеры вверх/вниз
                 camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
-
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
             });
 
-            document.addEventListener('keydown', (e) => {
+            window.addEventListener('keydown', e => {
                 keyState[e.key.toLowerCase()] = true;
             });
 
-            document.addEventListener('keyup', (e) => {
+            window.addEventListener('keyup', e => {
                 keyState[e.key.toLowerCase()] = false;
             });
         }
@@ -117,24 +111,19 @@
             const delta = clock.getDelta();
 
             moveVector.set(
-                (keyState['d'] ? 1 : (keyState['a'] ? -1 : 0)), // Стрейф влево/вправо
-                (keyState['w'] ? 1 : (keyState['s'] ? -1 : 0))  // Движение вперед/назад
+                (keyState['d'] ? 1 : 0) - (keyState['a'] ? 1 : 0),
+                (keyState['w'] ? 1 : 0) - (keyState['s'] ? 1 : 0)
             );
 
-            // Движение камеры относительно направления взгляда
             const forward = new THREE.Vector3();
-            const right = new THREE.Vector3();
-
             camera.getWorldDirection(forward);
-            forward.y = 0; // Отключаем вертикальное движение
+            forward.y = 0;
             forward.normalize();
 
+            const right = new THREE.Vector3();
             right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
 
-            // Перемещение вперед/назад
             camera.position.add(forward.multiplyScalar(moveVector.y * moveSpeed * delta));
-
-            // Перемещение влево/вправо
             camera.position.add(right.multiplyScalar(moveVector.x * moveSpeed * delta));
 
             renderer.render(scene, camera);
