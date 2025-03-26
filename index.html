@@ -35,6 +35,32 @@
 
         init();
         animate();
+        <script>
+        // ... (остальные переменные и инициализация остаются без изменений) ... 
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            // Update movement for desktop
+            if(!isMobile) {
+                moveVector.set(
+                    (keyState['a'] ? -1 : (keyState['d'] ? 1 : 0)),  // X-ось: A - влево, D - вправо
+                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))    // Z-ось: W - вперёд, S - назад
+                );
+            }
+
+            if(model) {
+                // Обновление позиции
+                model.position.x += moveVector.x * moveSpeed * delta; // Движение влево/вправо
+                model.position.z += moveVector.y * moveSpeed * delta; // Движение вперёд/назад
+                
+                // ... (остальная логика вращения остаётся без изменений) ...
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
 
         function init() {
             // Создание сцены
