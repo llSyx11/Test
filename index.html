@@ -41,6 +41,7 @@
 
     <script>
         let scene, camera, renderer, model;
+        let moveVector = new THREE.Vector2();
         let rotateVector = new THREE.Vector2();
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         let moveSpeed = 3;
@@ -114,7 +115,7 @@
             });
 
             moveJoystick.on('move', (evt, data) => {
-                // Remove movement logic here, keep rotation logic if needed.
+                moveVector.set(data.vector.x, data.vector.y);
             });
 
             rotateJoystick.on('move', (evt, data) => {
@@ -151,15 +152,21 @@
                 prevMouseY = e.clientY;
             });
 
-            // Keyboard controls (not moving model, just rotating)
+            // Keyboard controls
             window.addEventListener('keydown', e => {
                 const key = e.key.toLowerCase();
-                if(['w','a','s','d'].includes(key)) keyState[key] = true;
+                if(['w','a','s','d'].includes(key)) {
+                    keyState[key] = true;
+                    console.log(`Key pressed: ${key}`); // Для отладки
+                }
             });
             
             window.addEventListener('keyup', e => {
                 const key = e.key.toLowerCase();
-                if(['w','a','s','d'].includes(key)) keyState[key] = false;
+                if(['w','a','s','d'].includes(key)) {
+                    keyState[key] = false;
+                    console.log(`Key released: ${key}`); // Для отладки
+                }
             });
         }
 
@@ -167,12 +174,21 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Update rotation based on key presses for desktop
+            // Обновляем вектор движения (оставлено для демонстрации работы клавиш)
             if(!isMobile) {
-                if (keyState['a']) model.rotation.y += rotateSpeed * delta;
-                if (keyState['d']) model.rotation.y -= rotateSpeed * delta;
-                if (keyState['w']) model.rotation.x += rotateSpeed * delta;
-                if (keyState['s']) model.rotation.x -= rotateSpeed * delta;
+                moveVector.set(
+                    (keyState['a'] ? -1 : (keyState['d'] ? 1 : 0)),
+                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))
+                );
+            }
+
+            if(model) {
+                // Убрано изменение позиции модели
+                // model.position.x += moveVector.x * moveSpeed * delta;
+                // model.position.z += moveVector.y * moveSpeed * delta;
+                
+                // Оставлено вращение (по желанию)
+                model.rotation.y += rotateVector.x * rotateSpeed * delta;
             }
 
             renderer.render(scene, camera);
