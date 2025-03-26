@@ -55,13 +55,14 @@
             light.position.set(5, 5, 5);
             scene.add(light);
 
-            // Загрузка модели
+            // Загрузка модели из указанного URL
             const loader = new THREE.GLTFLoader();
             loader.load(
-                "model.glb",  // Укажи свой путь к модели
+                "https://raw.githubusercontent.com/llSyx11/Test/main/001.glb",
                 function (gltf) {
                     model = gltf.scene;
                     scene.add(model);
+                    console.log("Модель загружена успешно!");
                 },
                 function (xhr) {
                     console.log(`Модель загружается: ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
