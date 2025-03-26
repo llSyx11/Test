@@ -53,20 +53,16 @@
         animate();
 
         function init() {
-            // Scene setup
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x444444);
 
-            // Camera setup
             camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
             camera.position.set(0, 2, 5);
 
-            // Renderer with antialiasing
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // Lighting
             const ambient = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambient);
             
@@ -74,7 +70,6 @@
             directional.position.set(5, 5, 5);
             scene.add(directional);
 
-            // Model loading
             new THREE.GLTFLoader().load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
                 gltf => {
@@ -86,11 +81,9 @@
                 error => console.error('Error loading model:', error)
             );
 
-            // Controls setup
             if(isMobile) setupMobileControls();
             else setupDesktopControls();
 
-            // Window resize handler
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth/window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -98,35 +91,9 @@
             });
         }
 
-        function setupMobileControls() {
-            document.getElementById('joystick-container').style.display = 'block';
-            document.getElementById('right-joystick').style.display = 'block';
-
-            const moveJoystick = nipplejs.create({
-                zone: document.getElementById('joystick-container'),
-                mode: 'static',
-                position: { left: '50%', bottom: '50%' }
-            });
-
-            const rotateJoystick = nipplejs.create({
-                zone: document.getElementById('right-joystick'),
-                mode: 'static',
-                position: { left: '50%', bottom: '50%' }
-            });
-
-            moveJoystick.on('move', (evt, data) => {
-                moveVector.set(data.vector.x, data.vector.y);
-            });
-
-            rotateJoystick.on('move', (evt, data) => {
-                rotateVector.set(data.vector.x, data.vector.y);
-            });
-        }
-
         function setupDesktopControls() {
             document.querySelector('.keyboard-controls').style.display = 'block';
             
-            // Mouse controls
             let isDragging = false;
             let prevMouseX = 0;
             let prevMouseY = 0;
@@ -152,7 +119,6 @@
                 prevMouseY = e.clientY;
             });
 
-            // Keyboard controls
             window.addEventListener('keydown', e => {
                 const key = e.key.toLowerCase();
                 if(['w','a','s','d'].includes(key)) keyState[key] = true;
@@ -168,20 +134,16 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Update movement for desktop
             if(!isMobile) {
                 moveVector.set(
-                    (keyState['a'] ? -1 : (keyState['d'] ? 1 : 0)),  // X-ось: A - влево, D - вправо
-                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))   // Z-ось: W - вперёд (уменьшает Z), S - назад (увеличивает Z)
+                    (keyState['d'] ? -1 : (keyState['a'] ? 1 : 0)),
+                    (keyState['s'] ? -1 : (keyState['w'] ? 1 : 0))
                 );
             }
 
             if(model) {
-                // Update position
                 model.position.x += moveVector.x * moveSpeed * delta;
                 model.position.z += moveVector.y * moveSpeed * delta;
-                
-                // Update rotation
                 model.rotation.y += rotateVector.x * rotateSpeed * delta;
             }
 
