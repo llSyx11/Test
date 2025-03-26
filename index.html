@@ -8,19 +8,16 @@
   <style>
     * { margin: 0; padding: 0; }
     canvas { display: block; }
-
-    #joystick-container, #right-joystick {
-      position: fixed;
+    #joystick-container, #right-joystick { 
+      position: fixed; 
       bottom: 20px;
       width: 100px;
       height: 100px;
       z-index: 100;
       display: none;
     }
-
     #joystick-container { left: 20px; }
     #right-joystick { right: 20px; }
-
     .keyboard-controls {
       position: fixed;
       bottom: 30px;
@@ -28,16 +25,11 @@
       color: white;
       font-family: Arial;
       font-size: 24px;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
       display: none;
-    }
-
-    body {
-      overflow: hidden; /* Hide scrollbars */
     }
   </style>
 </head>
-
 <body>
   <div class="keyboard-controls">W A S D + Mouse</div>
   <div id="joystick-container"></div>
@@ -67,11 +59,10 @@
 
     function init() {
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xffffff); // Changed background color for better visibility
+      scene.background = new THREE.Color(0xffffff); // Changed to white for better visibility
 
       camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 1.6, 3); // Adjusted initial camera position
-      camera.lookAt(0, 0, 0); // Make sure the camera is initially looking at the center
+      camera.position.set(0, 1.6, 0);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -162,54 +153,12 @@
       // Keyboard controls
       window.addEventListener('keydown', e => {
         const key = e.key.toLowerCase();
-        if (['w', 'a', 's', 'd'].includes(key)) keyState[key] = true;
+        if(['w','a','s','d',' '].includes(key)) keyState[key] = true;
       });
 
       window.addEventListener('keyup', e => {
         const key = e.key.toLowerCase();
-        if (['w', 'a', 's', 'd'].includes(key)) keyState[key] = false;
-      });
-    }
-
-    function setupMobileControls() {
-      document.querySelector('.keyboard-controls').style.display = 'block';
-      // Joystick controls
-      const joystickContainer = document.getElementById('joystick-container');
-      const rightJoystick = document.getElementById('right-joystick');
-
-      joystickContainer.style.display = 'block';
-      rightJoystick.style.display = 'block';
-
-      let isMoving = false;
-
-      rightJoystick.addEventListener('touchstart', () => {
-        isMoving = true;
-      });
-
-      rightJoystick.addEventListener('touchend', () => {
-        isMoving = false;
-      });
-
-      document.addEventListener('pointermove', (e) => {
-        if (!isMoving) return;
-
-        const x = e.clientX - joystickContainer.offsetLeft - rightJoystick.offsetWidth / 2;
-        const y = e.clientY - joystickContainer.offsetTop - rightJoystick.offsetHeight / 2;
-
-        // Normalize the vector
-        const len = Math.sqrt(x * x + y * y);
-        if (len > 1) {
-          len = 1;
-        }
-
-        const rx = (x / len) * moveSpeed;
-        const ry = (y / len) * moveSpeed;
-
-        yaw -= rx * rotateSpeed;
-        pitch -= ry * rotateSpeed;
-
-        // Constrain pitch to prevent flipping
-        pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+        if(['w','a','s','d',' '].includes(key)) keyState[key] = false;
       });
     }
 
@@ -224,11 +173,10 @@
       if (!isMobile) {
         moveVector.set(0, 0, 0);
 
-        if (keyState['w']) moveVector.z -= 1;
-        if (keyState['s']) moveVector.z += 1;
+        if (keyState['w']) moveVector.z -= 1; // Forward
+        if (keyState['s']) moveVector.z += 1; // Backward
         if (keyState['a']) moveVector.x -= 1;
         if (keyState['d']) moveVector.x += 1;
-        if (keyState[' ']) moveVector.y += 1; // Jump
 
         // Normalize vector
         if (moveVector.length() > 0) {
@@ -251,4 +199,5 @@
     }
   </script>
 </body>
+
 </html>
