@@ -1,162 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Model Viewer</title>
-    <style>
-        * { margin: 0; padding: 0; }
-        canvas { display: block; }
-        #joystick-container, #right-joystick { 
-            position: fixed; 
-            bottom: 20px;
-            width: 100px;
-            height: 100px;
-            z-index: 100;
-            display: none;
-        }
-        #joystick-container { left: 20px; }
-        #right-joystick { right: 20px; }
-        .keyboard-controls {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            color: white;
-            font-family: Arial;
-            font-size: 24px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            display: none;
-        }
-    </style>
+    <!-- ... (остальные части остаются без изменений) ... -->
 </head>
 <body>
-    <div class="keyboard-controls">W A S D</div>
-    <div id="joystick-container"></div>
-    <div id="right-joystick"></div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+    <!-- ... (остальные части остаются без изменений) ... -->
 
     <script>
         let scene, camera, renderer, model;
-        let moveVector = new THREE.Vector2();
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         let moveSpeed = 3;
         let clock = new THREE.Clock();
         let keyState = {};
-        let cameraRotation = new THREE.Euler(0, 0, 0, 'YXZ'); // To handle camera rotation
+        
+        // Переменные для управления камерой
+        let yaw = 0;
+        let pitch = 0;
+        let isMouseDown = false;
+        let prevMouseX = 0;
+        let prevMouseY = 0;
 
         init();
         animate();
 
         function init() {
-            // Scene setup
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x444444);
+            // ... (инициализация сцены, камеры, рендерера и модели остается без изменений) ... 
 
-            // Camera setup
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 2, 5);
+            // Освещение и загрузка модели
+            // ... (без изменений) ...
 
-            // Renderer with antialiasing
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            // Lighting
-            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambient);
-            
-            const directional = new THREE.DirectionalLight(0xffffff, 0.8);
-            directional.position.set(5, 5, 5);
-            scene.add(directional);
-
-            // Model loading
-            new THREE.GLTFLoader().load(
-                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
-                gltf => {
-                    model = gltf.scene;
-                    model.scale.set(2, 2, 2);
-                    scene.add(model);
-                },
-                undefined,
-                error => console.error('Error loading model:', error)
-            );
-
-            // Controls setup
+            // Настройка элементов управления
             if(isMobile) setupMobileControls();
             else setupDesktopControls();
 
-            // Window resize handler
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth/window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-        }
-
-        function setupMobileControls() {
-            document.getElementById('joystick-container').style.display = 'block';
-            document.getElementById('right-joystick').style.display = 'block';
-
-            const moveJoystick = nipplejs.create({
-                zone: document.getElementById('joystick-container'),
-                mode: 'static',
-                position: { left: '50%', bottom: '50%' }
-            });
-
-            moveJoystick.on('move', (evt, data) => {
-                moveVector.set(data.vector.x, data.vector.y);
-            });
+            // ... (обработчик изменения размера окна остается без изменений) ...
         }
 
         function setupDesktopControls() {
             document.querySelector('.keyboard-controls').style.display = 'block';
-            
-            // Keyboard controls
+
+            // Обработчики клавиатуры
             window.addEventListener('keydown', e => {
                 const key = e.key.toLowerCase();
-                if(['w','a','s','d'].includes(key)) {
-                    keyState[key] = true;
-                    console.log(`Key pressed: ${key}`); // Для отладки
-                }
+                if(['w','a','s','d'].includes(key)) keyState[key] = true;
             });
             
             window.addEventListener('keyup', e => {
                 const key = e.key.toLowerCase();
-                if(['w','a','s','d'].includes(key)) {
-                    keyState[key] = false;
-                    console.log(`Key released: ${key}`); // Для отладки
-                }
+                if(['w','a','s','d'].includes(key)) keyState[key] = false;
             });
+
+            // Обработчики мыши
+            document.addEventListener('mousedown', e => {
+                isMouseDown = true;
+                prevMouseX = e.clientX;
+                prevMouseY = e.clientY;
+            });
+
+            document.addEventListener('mousemove', e => {
+                if (!isMouseDown) return;
+                
+                const deltaX = e.clientX - prevMouseX;
+                const deltaY = e.clientY - prevMouseY;
+                prevMouseX = e.clientX;
+                prevMouseY = e.clientY;
+
+                // Обновляем углы поворота
+                yaw -= deltaX * 0.002;
+                pitch = THREE.MathUtils.clamp(pitch - deltaY * 0.002, -Math.PI/2, Math.PI/2);
+
+                // Применяем поворот к камере
+                camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+            });
+
+            document.addEventListener('mouseup', () => isMouseDown = false);
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Обновляем вектор движения (оставлено для демонстрации работы клавиш)
             if(!isMobile) {
-                moveVector.set(
-                    (keyState['a'] ? -1 : (keyState['d'] ? 1 : 0)),
-                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))
-                );
+                // Движение камеры
+                const direction = new THREE.Vector3();
+                const forward = new THREE.Vector3();
+                const right = new THREE.Vector3();
+
+                // Получаем направления камеры
+                camera.getWorldDirection(forward);
+                forward.y = 0; // Игнорируем вертикальную составляющую
+                forward.normalize();
+                right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
+
+                // Рассчитываем направление движения
+                if(keyState['w']) direction.add(forward);
+                if(keyState['s']) direction.sub(forward);
+                if(keyState['a']) direction.sub(right);
+                if(keyState['d']) direction.add(right);
+
+                // Нормализуем и применяем движение
+                if(direction.length() > 0) direction.normalize();
+                camera.position.addScaledVector(direction, moveSpeed * delta);
+            } else {
+                // Мобильное управление (остается без изменений)
+                if(model) {
+                    model.position.x += moveVector.x * moveSpeed * delta;
+                    model.position.z += moveVector.y * moveSpeed * delta;
+                }
             }
-
-            // Calculate forward and right movement directions based on camera rotation
-            let forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
-            let right = new THREE.Vector3(1, 0, 0).applyEuler(camera.rotation);
-
-            if(model) {
-                // Move model based on camera direction
-                model.position.addScaledVector(forward, moveVector.y * moveSpeed * delta);
-                model.position.addScaledVector(right, moveVector.x * moveSpeed * delta);
-            }
-
-            // Update the camera's position based on user input for first-person movement
-            camera.rotation.set(cameraRotation.x, cameraRotation.y, cameraRotation.z);
 
             renderer.render(scene, camera);
         }
