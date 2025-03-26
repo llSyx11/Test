@@ -173,8 +173,8 @@
       if (!isMobile) {
         moveVector.set(0, 0, 0);
 
-        if (keyState['w']) moveVector.z -= 1; // Forward
-        if (keyState['s']) moveVector.z += 1; // Backward
+        if (keyState['w']) moveVector.z += 1; // Backward (originally was forward)
+        if (keyState['s']) moveVector.z -= 1; // Forward (originally was backward)
         if (keyState['a']) moveVector.x -= 1;
         if (keyState['d']) moveVector.x += 1;
 
@@ -199,5 +199,4 @@
     }
   </script>
 </body>
-
 </html>
