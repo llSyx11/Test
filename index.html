@@ -93,22 +93,22 @@
             let direction = new THREE.Vector3();
 
             // Движение камеры
-            if (keyState["w"]) {
+            if (keyState["s"]) {
                 camera.getWorldDirection(direction);
                 camera.position.addScaledVector(direction, moveSpeed * delta);
             }
-            if (keyState["s"]) {
+            if (keyState["w"]) {
                 camera.getWorldDirection(direction);
                 camera.position.addScaledVector(direction, -moveSpeed * delta);
             }
-            if (keyState["a"]) {
-                camera.getWorldDirection(direction);
-                let left = new THREE.Vector3().crossVectors(direction, camera.up).normalize(); // **Инвертировано**
-                camera.position.addScaledVector(left, moveSpeed * delta);
-            }
             if (keyState["d"]) {
                 camera.getWorldDirection(direction);
-                let right = new THREE.Vector3().crossVectors(camera.up, direction).normalize(); // **Инвертировано**
+                let left = new THREE.Vector3().crossVectors(camera.up, direction).normalize();
+                camera.position.addScaledVector(left, moveSpeed * delta);
+            }
+            if (keyState["a"]) {
+                camera.getWorldDirection(direction);
+                let right = new THREE.Vector3().crossVectors(direction, camera.up).normalize();
                 camera.position.addScaledVector(right, moveSpeed * delta);
             }
 
