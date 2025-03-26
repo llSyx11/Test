@@ -281,7 +281,7 @@
                 size: 100
             });
             
-            // Right joystick for camera rotation (инвертирован)
+            // Right joystick for camera rotation
             const rightJoystick = nipplejs.create({
                 zone: document.getElementById('right-joystick'),
                 mode: 'static',
@@ -302,9 +302,9 @@
             });
             
             rightJoystick.on('move', (evt, data) => {
-                // Инвертированное управление камерой
-                yaw += data.vector.x * 0.05; // Изменено с -= на +
-                pitch += data.vector.y * 0.05; // Изменено с -= на +
+                // Инвертирован только горизонтальный поворот (по оси X)
+                yaw -= data.vector.x * 0.05; // Изменено с -= на + (инверсия)
+                pitch -= data.vector.y * 0.05; // Вертикальный поворот без изменений
                 
                 // Constrain pitch to prevent flipping
                 pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
