@@ -103,12 +103,12 @@
             }
             if (keyState["a"]) {
                 camera.getWorldDirection(direction);
-                let left = new THREE.Vector3().crossVectors(camera.up, direction).normalize();
+                let left = new THREE.Vector3().crossVectors(direction, camera.up).normalize(); // **Инвертировано**
                 camera.position.addScaledVector(left, moveSpeed * delta);
             }
             if (keyState["d"]) {
                 camera.getWorldDirection(direction);
-                let right = new THREE.Vector3().crossVectors(direction, camera.up).normalize();
+                let right = new THREE.Vector3().crossVectors(camera.up, direction).normalize(); // **Инвертировано**
                 camera.position.addScaledVector(right, moveSpeed * delta);
             }
 
