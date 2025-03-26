@@ -57,6 +57,7 @@
         let moveLeft = false;
         let moveRight = false;
         let canJump = false;
+        let leftJoystickForce = { x: 0, y: 0 };
 
         init();
         animate();
@@ -178,7 +179,7 @@
                 pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
             }
 
-            // Keyboard controls - изменены клавиши A и D
+            // Keyboard controls with swapped A and D keys
             window.addEventListener('keydown', (event) => {
                 switch (event.code) {
                     case 'ArrowUp':
@@ -186,7 +187,7 @@
                         moveForward = true;
                         break;
                     case 'ArrowLeft':
-                    case 'KeyD': // Теперь D - движение влево
+                    case 'KeyA': // Now A is left movement
                         moveLeft = true;
                         break;
                     case 'ArrowDown':
@@ -194,7 +195,7 @@
                         moveBackward = true;
                         break;
                     case 'ArrowRight':
-                    case 'KeyA': // Теперь A - движение вправо
+                    case 'KeyD': // Now D is right movement
                         moveRight = true;
                         break;
                     case 'Space':
@@ -211,7 +212,7 @@
                         moveForward = false;
                         break;
                     case 'ArrowLeft':
-                    case 'KeyD': // Теперь D - движение влево
+                    case 'KeyA': // Now A is left movement
                         moveLeft = false;
                         break;
                     case 'ArrowDown':
@@ -219,7 +220,7 @@
                         moveBackward = false;
                         break;
                     case 'ArrowRight':
-                    case 'KeyA': // Теперь A - движение вправо
+                    case 'KeyD': // Now D is right movement
                         moveRight = false;
                         break;
                 }
@@ -233,15 +234,16 @@
             // Update camera rotation
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
 
-            // Update movement based on keyboard
+            // Update movement based on keyboard or mobile controls
             if(!isMobile) {
+                // Desktop controls
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
                 velocity.y -= 9.8 * 15.0 * delta; // gravity
 
                 direction.z = Number(moveForward) - Number(moveBackward);
                 direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize(); // this ensures consistent movements in all directions
+                direction.normalize();
 
                 if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta * 60;
                 if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta * 60;
@@ -252,16 +254,27 @@
                 forward.applyQuaternion(camera.quaternion);
                 right.applyQuaternion(camera.quaternion);
                 
-                // Apply movement relative to camera orientation
                 camera.translateX(velocity.x * delta);
                 camera.translateZ(velocity.z * delta);
-                camera.position.y += velocity.y * delta; // Y movement is independent
+                camera.position.y += velocity.y * delta;
 
                 // Simple ground collision
                 if (camera.position.y < 1.6) {
                     camera.position.y = 1.6;
                     velocity.y = 0;
                     canJump = true;
+                }
+            } else {
+                // Mobile controls - continuous movement based on joystick force
+                if (leftJoystickForce.x !== 0 || leftJoystickForce.y !== 0) {
+                    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                    
+                    const moveX = right.multiplyScalar(leftJoystickForce.x * moveSpeed * delta * 60);
+                    const moveZ = forward.multiplyScalar(leftJoystickForce.y * moveSpeed * delta * 60);
+                    
+                    camera.position.add(moveX);
+                    camera.position.add(moveZ);
                 }
             }
 
@@ -291,20 +304,21 @@
             });
             
             leftJoystick.on('move', (evt, data) => {
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                
-                const moveX = right.multiplyScalar(data.vector.x * moveSpeed * 0.05);
-                const moveZ = forward.multiplyScalar(data.vector.y * moveSpeed * 0.05);
-                
-                camera.position.add(moveX);
-                camera.position.add(moveZ);
+                // Store the force for continuous movement in animate()
+                leftJoystickForce.x = data.vector.x;
+                leftJoystickForce.y = data.vector.y;
+            });
+            
+            leftJoystick.on('end', () => {
+                // Reset force when joystick is released
+                leftJoystickForce.x = 0;
+                leftJoystickForce.y = 0;
             });
             
             rightJoystick.on('move', (evt, data) => {
-                // Инвертирован только горизонтальный поворот (по оси X)
-                yaw -= data.vector.x * 0.05; // Изменено с -= на + (инверсия)
-                pitch -= data.vector.y * 0.05; // Вертикальный поворот без изменений
+                // Inverted horizontal rotation (yaw)
+                yaw += data.vector.x * 0.05; // Inverted from -= to +=
+                pitch -= data.vector.y * 0.05;
                 
                 // Constrain pitch to prevent flipping
                 pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
