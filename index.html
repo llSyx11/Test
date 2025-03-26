@@ -178,7 +178,7 @@
                 pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
             }
 
-            // Keyboard controls
+            // Keyboard controls - изменены клавиши A и D
             window.addEventListener('keydown', (event) => {
                 switch (event.code) {
                     case 'ArrowUp':
@@ -186,7 +186,7 @@
                         moveForward = true;
                         break;
                     case 'ArrowLeft':
-                    case 'KeyA':
+                    case 'KeyD': // Теперь D - движение влево
                         moveLeft = true;
                         break;
                     case 'ArrowDown':
@@ -194,7 +194,7 @@
                         moveBackward = true;
                         break;
                     case 'ArrowRight':
-                    case 'KeyD':
+                    case 'KeyA': // Теперь A - движение вправо
                         moveRight = true;
                         break;
                     case 'Space':
@@ -211,7 +211,7 @@
                         moveForward = false;
                         break;
                     case 'ArrowLeft':
-                    case 'KeyA':
+                    case 'KeyD': // Теперь D - движение влево
                         moveLeft = false;
                         break;
                     case 'ArrowDown':
@@ -219,7 +219,7 @@
                         moveBackward = false;
                         break;
                     case 'ArrowRight':
-                    case 'KeyD':
+                    case 'KeyA': // Теперь A - движение вправо
                         moveRight = false;
                         break;
                 }
@@ -281,7 +281,7 @@
                 size: 100
             });
             
-            // Right joystick for camera rotation
+            // Right joystick for camera rotation (инвертирован)
             const rightJoystick = nipplejs.create({
                 zone: document.getElementById('right-joystick'),
                 mode: 'static',
@@ -302,8 +302,9 @@
             });
             
             rightJoystick.on('move', (evt, data) => {
-                yaw -= data.vector.x * 0.05;
-                pitch -= data.vector.y * 0.05;
+                // Инвертированное управление камерой
+                yaw += data.vector.x * 0.05; // Изменено с -= на +
+                pitch += data.vector.y * 0.05; // Изменено с -= на +
                 
                 // Constrain pitch to prevent flipping
                 pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
