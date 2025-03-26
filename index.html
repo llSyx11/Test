@@ -304,7 +304,7 @@
             rightJoystick.on('move', (evt, data) => {
                 // Инвертирован только горизонтальный поворот (по оси X)
                 yaw -= data.vector.x * 0.05; // Изменено с -= на + (инверсия)
-                pitch += data.vector.y * 0.05; // Вертикальный поворот без изменений
+                pitch -= data.vector.y * 0.05; // Вертикальный поворот без изменений
                 
                 // Constrain pitch to prevent flipping
                 pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
