@@ -41,7 +41,6 @@
 
     <script>
         let scene, camera, renderer, model;
-        let moveVector = new THREE.Vector3();
         let rotateVector = new THREE.Vector2();
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         let moveSpeed = 3;
@@ -115,7 +114,7 @@
             });
 
             moveJoystick.on('move', (evt, data) => {
-                moveVector.set(data.vector.x, 0, data.vector.y);
+                // Remove movement logic here, keep rotation logic if needed.
             });
 
             rotateJoystick.on('move', (evt, data) => {
@@ -152,7 +151,7 @@
                 prevMouseY = e.clientY;
             });
 
-            // Keyboard controls
+            // Keyboard controls (not moving model, just rotating)
             window.addEventListener('keydown', e => {
                 const key = e.key.toLowerCase();
                 if(['w','a','s','d'].includes(key)) keyState[key] = true;
@@ -168,22 +167,12 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Update movement for desktop
+            // Update rotation based on key presses for desktop
             if(!isMobile) {
-                moveVector.set(
-                    (keyState['a'] ? -1 : (keyState['d'] ? 1 : 0)),
-                    0,
-                    (keyState['w'] ? -1 : (keyState['s'] ? 1 : 0))
-                );
-            }
-
-            if(model) {
-                // Update position
-                model.position.x += moveVector.x * moveSpeed * delta;
-                model.position.z += moveVector.z * moveSpeed * delta;
-                
-                // Update rotation
-                model.rotation.y += rotateVector.x * rotateSpeed * delta;
+                if (keyState['a']) model.rotation.y += rotateSpeed * delta;
+                if (keyState['d']) model.rotation.y -= rotateSpeed * delta;
+                if (keyState['w']) model.rotation.x += rotateSpeed * delta;
+                if (keyState['s']) model.rotation.x -= rotateSpeed * delta;
             }
 
             renderer.render(scene, camera);
