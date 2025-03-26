@@ -46,6 +46,7 @@
         let moveSpeed = 3;
         let clock = new THREE.Clock();
         let keyState = {};
+        let cameraRotation = new THREE.Euler(0, 0, 0, 'YXZ'); // To handle camera rotation
 
         init();
         animate();
@@ -144,11 +145,18 @@
                 );
             }
 
+            // Calculate forward and right movement directions based on camera rotation
+            let forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+            let right = new THREE.Vector3(1, 0, 0).applyEuler(camera.rotation);
+
             if(model) {
-                // Модели больше не вращаются, только двигаются
-                model.position.x += moveVector.x * moveSpeed * delta;
-                model.position.z += moveVector.y * moveSpeed * delta;
+                // Move model based on camera direction
+                model.position.addScaledVector(forward, moveVector.y * moveSpeed * delta);
+                model.position.addScaledVector(right, moveVector.x * moveSpeed * delta);
             }
+
+            // Update the camera's position based on user input for first-person movement
+            camera.rotation.set(cameraRotation.x, cameraRotation.y, cameraRotation.z);
 
             renderer.render(scene, camera);
         }
