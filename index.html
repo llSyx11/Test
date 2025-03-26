@@ -1,113 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- ... (остальные части остаются без изменений) ... -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Model Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        canvas { display: block; }
+        .keyboard-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            color: white;
+            font-family: Arial;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <!-- ... (остальные части остаются без изменений) ... -->
+    <div class="keyboard-controls">W A S D</div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        let scene, camera, renderer, model;
-        let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        let scene, camera, renderer;
         let moveSpeed = 3;
         let clock = new THREE.Clock();
         let keyState = {};
-        
-        // Переменные для управления камерой
-        let yaw = 0;
-        let pitch = 0;
-        let isMouseDown = false;
-        let prevMouseX = 0;
-        let prevMouseY = 0;
 
         init();
         animate();
 
         function init() {
-            // ... (инициализация сцены, камеры, рендерера и модели остается без изменений) ... 
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x444444);
 
-            // Освещение и загрузка модели
-            // ... (без изменений) ...
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 2, 5);
 
-            // Настройка элементов управления
-            if(isMobile) setupMobileControls();
-            else setupDesktopControls();
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-            // ... (обработчик изменения размера окна остается без изменений) ...
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambient);
+
+            const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+            directional.position.set(5, 5, 5);
+            scene.add(directional);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            setupKeyboardControls();
         }
 
-        function setupDesktopControls() {
-            document.querySelector('.keyboard-controls').style.display = 'block';
-
-            // Обработчики клавиатуры
-            window.addEventListener('keydown', e => {
-                const key = e.key.toLowerCase();
-                if(['w','a','s','d'].includes(key)) keyState[key] = true;
+        function setupKeyboardControls() {
+            window.addEventListener('keydown', (e) => {
+                keyState[e.key.toLowerCase()] = true;
             });
-            
-            window.addEventListener('keyup', e => {
-                const key = e.key.toLowerCase();
-                if(['w','a','s','d'].includes(key)) keyState[key] = false;
+            window.addEventListener('keyup', (e) => {
+                keyState[e.key.toLowerCase()] = false;
             });
-
-            // Обработчики мыши
-            document.addEventListener('mousedown', e => {
-                isMouseDown = true;
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
-            });
-
-            document.addEventListener('mousemove', e => {
-                if (!isMouseDown) return;
-                
-                const deltaX = e.clientX - prevMouseX;
-                const deltaY = e.clientY - prevMouseY;
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
-
-                // Обновляем углы поворота
-                yaw -= deltaX * 0.002;
-                pitch = THREE.MathUtils.clamp(pitch - deltaY * 0.002, -Math.PI/2, Math.PI/2);
-
-                // Применяем поворот к камере
-                camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
-            });
-
-            document.addEventListener('mouseup', () => isMouseDown = false);
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
+            let delta = clock.getDelta();
+            
+            let forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+            let right = new THREE.Vector3(1, 0, 0).applyEuler(camera.rotation);
 
-            if(!isMobile) {
-                // Движение камеры
-                const direction = new THREE.Vector3();
-                const forward = new THREE.Vector3();
-                const right = new THREE.Vector3();
-
-                // Получаем направления камеры
-                camera.getWorldDirection(forward);
-                forward.y = 0; // Игнорируем вертикальную составляющую
-                forward.normalize();
-                right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
-
-                // Рассчитываем направление движения
-                if(keyState['w']) direction.add(forward);
-                if(keyState['s']) direction.sub(forward);
-                if(keyState['a']) direction.sub(right);
-                if(keyState['d']) direction.add(right);
-
-                // Нормализуем и применяем движение
-                if(direction.length() > 0) direction.normalize();
-                camera.position.addScaledVector(direction, moveSpeed * delta);
-            } else {
-                // Мобильное управление (остается без изменений)
-                if(model) {
-                    model.position.x += moveVector.x * moveSpeed * delta;
-                    model.position.z += moveVector.y * moveSpeed * delta;
-                }
-            }
+            if (keyState['w']) camera.position.addScaledVector(forward, moveSpeed * delta);
+            if (keyState['s']) camera.position.addScaledVector(forward, -moveSpeed * delta);
+            if (keyState['a']) camera.position.addScaledVector(right, -moveSpeed * delta);
+            if (keyState['d']) camera.position.addScaledVector(right, moveSpeed * delta);
 
             renderer.render(scene, camera);
         }
