@@ -42,10 +42,8 @@
     <script>
         let scene, camera, renderer, model;
         let moveVector = new THREE.Vector2();
-        let rotateVector = new THREE.Vector2();
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         let moveSpeed = 3;
-        let rotateSpeed = 2;
         let clock = new THREE.Clock();
         let keyState = {};
 
@@ -108,50 +106,14 @@
                 position: { left: '50%', bottom: '50%' }
             });
 
-            const rotateJoystick = nipplejs.create({
-                zone: document.getElementById('right-joystick'),
-                mode: 'static',
-                position: { left: '50%', bottom: '50%' }
-            });
-
             moveJoystick.on('move', (evt, data) => {
                 moveVector.set(data.vector.x, data.vector.y);
-            });
-
-            rotateJoystick.on('move', (evt, data) => {
-                rotateVector.set(data.vector.x, data.vector.y);
             });
         }
 
         function setupDesktopControls() {
             document.querySelector('.keyboard-controls').style.display = 'block';
             
-            // Mouse controls
-            let isDragging = false;
-            let prevMouseX = 0;
-            let prevMouseY = 0;
-
-            renderer.domElement.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
-            });
-
-            window.addEventListener('mouseup', () => isDragging = false);
-            
-            renderer.domElement.addEventListener('mousemove', (e) => {
-                if(!isDragging || !model) return;
-                
-                const deltaX = e.clientX - prevMouseX;
-                const deltaY = e.clientY - prevMouseY;
-                
-                model.rotation.y += deltaX * 0.01;
-                model.rotation.x += deltaY * 0.01;
-                
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
-            });
-
             // Keyboard controls
             window.addEventListener('keydown', e => {
                 const key = e.key.toLowerCase();
@@ -183,12 +145,9 @@
             }
 
             if(model) {
-                // Убрано изменение позиции модели
-                // model.position.x += moveVector.x * moveSpeed * delta;
-                // model.position.z += moveVector.y * moveSpeed * delta;
-                
-                // Оставлено вращение (по желанию)
-                model.rotation.y += rotateVector.x * rotateSpeed * delta;
+                // Модели больше не вращаются, только двигаются
+                model.position.x += moveVector.x * moveSpeed * delta;
+                model.position.z += moveVector.y * moveSpeed * delta;
             }
 
             renderer.render(scene, camera);
