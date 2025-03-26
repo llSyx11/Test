@@ -7,6 +7,16 @@
     <style>
         * { margin: 0; padding: 0; }
         canvas { display: block; }
+        #joystick-container, #right-joystick { 
+            position: fixed; 
+            bottom: 20px;
+            width: 100px;
+            height: 100px;
+            z-index: 100;
+            display: none;
+        }
+        #joystick-container { left: 20px; }
+        #right-joystick { right: 20px; }
         .keyboard-controls {
             position: fixed;
             bottom: 30px;
@@ -15,101 +25,126 @@
             font-family: Arial;
             font-size: 24px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="keyboard-controls">W A S D</div>
+    <div id="joystick-container"></div>
+    <div id="right-joystick"></div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+
     <script>
-        let scene, camera, renderer;
+        let scene, camera, renderer, model;
+        let moveVector = new THREE.Vector2();
+        let rotateVector = new THREE.Vector2();
+        let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        let moveSpeed = 3;
+        let rotateSpeed = 2;
+        let clock = new THREE.Clock();
         let keyState = {};
-        let moveSpeed = 5;
-        let lookSpeed = 0.002;
-        let isDragging = false;
-        let prevMouseX = 0, prevMouseY = 0;
 
         init();
         animate();
 
         function init() {
-            // Создание сцены
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x444444);
 
-            // Камера (персонаж от первого лица)
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
             camera.position.set(0, 2, 5);
 
-            // Рендерер
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // Свет
-            const light = new THREE.DirectionalLight(0xffffff, 0.8);
-            light.position.set(5, 5, 5);
-            scene.add(light);
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambient);
+            
+            const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+            directional.position.set(5, 5, 5);
+            scene.add(directional);
 
-            // Управление клавиатурой
-            window.addEventListener("keydown", (e) => keyState[e.key.toLowerCase()] = true);
-            window.addEventListener("keyup", (e) => keyState[e.key.toLowerCase()] = false);
+            new THREE.GLTFLoader().load(
+                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
+                gltf => {
+                    model = gltf.scene;
+                    model.scale.set(2, 2, 2);
+                    scene.add(model);
+                },
+                undefined,
+                error => console.error('Error loading model:', error)
+            );
 
-            // Управление мышью (вращение камеры)
-            renderer.domElement.addEventListener("mousedown", (e) => {
-                isDragging = true;
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
-            });
+            if(isMobile) setupMobileControls();
+            else setupDesktopControls();
 
-            window.addEventListener("mouseup", () => isDragging = false);
-
-            window.addEventListener("mousemove", (e) => {
-                if (!isDragging) return;
-
-                let deltaX = e.clientX - prevMouseX;
-                let deltaY = e.clientY - prevMouseY;
-
-                camera.rotation.y -= deltaX * lookSpeed; // Вращение влево-вправо
-                camera.rotation.x -= deltaY * lookSpeed; // Вращение вверх-вниз
-                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x)); // Ограничение по оси X
-
-                prevMouseX = e.clientX;
-                prevMouseY = e.clientY;
-            });
-
-            // Обработка изменения размера окна
-            window.addEventListener("resize", () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth/window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
         }
 
+        function setupDesktopControls() {
+            document.querySelector('.keyboard-controls').style.display = 'block';
+            
+            let isDragging = false;
+            let prevMouseX = 0;
+            let prevMouseY = 0;
+
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                prevMouseX = e.clientX;
+                prevMouseY = e.clientY;
+            });
+
+            window.addEventListener('mouseup', () => isDragging = false);
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if(!isDragging || !model) return;
+                
+                const deltaX = e.clientX - prevMouseX;
+                const deltaY = e.clientY - prevMouseY;
+                
+                model.rotation.y += deltaX * 0.01;
+                model.rotation.x += deltaY * 0.01;
+                
+                prevMouseX = e.clientX;
+                prevMouseY = e.clientY;
+            });
+
+            window.addEventListener('keydown', e => {
+                const key = e.key.toLowerCase();
+                if(['w','a','s','d'].includes(key)) keyState[key] = true;
+            });
+            
+            window.addEventListener('keyup', e => {
+                const key = e.key.toLowerCase();
+                if(['w','a','s','d'].includes(key)) keyState[key] = false;
+            });
+        }
+
         function animate() {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
 
-            let delta = 0.05;
-            let direction = new THREE.Vector3();
+            if(!isMobile) {
+                moveVector.set(
+                    (keyState['d'] ? -1 : (keyState['a'] ? 1 : 0)),
+                    (keyState['s'] ? -1 : (keyState['w'] ? 1 : 0))
+                );
+            }
 
-            // Движение камеры
-            if (keyState["w"]) {
-                camera.getWorldDirection(direction);
-                camera.position.addScaledVector(direction, moveSpeed * delta);
-            }
-            if (keyState["s"]) {
-                camera.getWorldDirection(direction);
-                camera.position.addScaledVector(direction, -moveSpeed * delta);
-            }
-            if (keyState["a"]) {
-                camera.getWorldDirection(direction);
-                let left = new THREE.Vector3().crossVectors(camera.up, direction).normalize();
-                camera.position.addScaledVector(left, moveSpeed * delta);
-            }
-            if (keyState["d"]) {
-                camera.getWorldDirection(direction);
-                let right = new THREE.Vector3().crossVectors(direction, camera.up).normalize();
-                camera.position.addScaledVector(right, moveSpeed * delta);
+            if(model) {
+                model.position.x += moveVector.x * moveSpeed * delta;
+                model.position.z += moveVector.y * moveSpeed * delta;
+                model.rotation.y += rotateVector.x * rotateSpeed * delta;
             }
 
             renderer.render(scene, camera);
