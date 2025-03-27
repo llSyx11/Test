@@ -188,7 +188,7 @@
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyD': moveRight = true; break;
-                    case 'Space': if(canJump) velocity.y = 550 * clock.getDelta(); canJump = false; break;
+                    case 'Space': if(canJump) velocity.y = 650 * clock.getDelta(); canJump = false; break;
                 }
             });
 
@@ -207,7 +207,7 @@
             const delta = clock.getDelta();
 
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
-            velocity.y -= 980 * delta;
+            velocity.y -= 300 * delta;
 
             const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
             const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
