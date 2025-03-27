@@ -114,7 +114,7 @@
             new THREE.GLTFLoader().load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/Home.fbx',
                 gltf => {
-                    model = gltf.scene;
+                    model = fbx.scene;
                     model.scale.set(2, 2, 2);
                     model.position.set(0, 0, -5); // Position model in front of camera
                     scene.add(model);
