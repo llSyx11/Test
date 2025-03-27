@@ -27,10 +27,23 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
             display: none;
         }
+        #collisionToggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            z-index: 1000;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div class="keyboard-controls">W A S D + Mouse</div>
+    <button id="collisionToggle">Show Collisions</button>
     <div id="joystick-container"></div>
     <div id="right-joystick"></div>
 
@@ -41,22 +54,23 @@
 
     <script>
         let scene, camera, renderer, model;
-        let moveVector = new THREE.Vector3();
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        let moveSpeed = 0.5;
+        let moveSpeed = 5.0;
         let rotateSpeed = 0.002;
         let clock = new THREE.Clock();
-        let keyState = {};
         let yaw = 0;
         let pitch = 0;
         let isLocked = false;
         let velocity = new THREE.Vector3();
-        let direction = new THREE.Vector3();
         let moveForward = false;
         let moveBackward = false;
         let moveLeft = false;
         let moveRight = false;
-        let canJump = false;
+        let canJump = true;
+        let collisionObjects = [];
+        const raycaster = new THREE.Raycaster();
+        const collisionDistance = 0.5;
+        let showCollisions = false;
 
         init();
         animate();
@@ -79,152 +93,111 @@
             directional.position.set(5, 5, 5);
             scene.add(directional);
 
-            // Add floor for reference
-            const floorGeometry = new THREE.PlaneGeometry(400, 400);
-            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x777777 });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;
-            floor.position.y = -0.5;
-            scene.add(floor);
-
-            // Add walls for better spatial awareness
-            const wallGeometry = new THREE.BoxGeometry(400, 3, 0.5);
-            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            createCollisionEnvironment();
             
-            const wall1 = new THREE.Mesh(wallGeometry, wallMaterial);
-            wall1.position.set(0, 1, -200);
-            scene.add(wall1);
-            
-            const wall2 = new THREE.Mesh(wallGeometry, wallMaterial);
-            wall2.position.set(0, 1, 200);
-            wall2.rotation.y = Math.PI;
-            scene.add(wall2);
-            
-            const wall3 = new THREE.Mesh(wallGeometry, wallMaterial);
-            wall3.position.set(-200, 1, 0);
-            wall3.rotation.y = Math.PI / 2;
-            scene.add(wall3);
-            
-            const wall4 = new THREE.Mesh(wallGeometry, wallMaterial);
-            wall4.position.set(200, 1, 0);
-            wall4.rotation.y = -Math.PI / 2;
-            scene.add(wall4);
-
-            // Load model (will be static)
             new THREE.GLTFLoader().load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
                 gltf => {
                     model = gltf.scene;
                     model.scale.set(1, 1, 1);
-                    model.position.set(0, 0, -5); // Position model in front of camera
-                    scene.add(model);
+                    model.position.set(0, 0, -5);
                     
-                    // Set camera position relative to the model size
-                    camera.position.y = 1.6; // Default camera height
+                    model.traverse(child => {
+                        if (child.isMesh && child.name.startsWith('collision_')) {
+                            child.visible = false;
+                            collisionObjects.push(child);
+                        }
+                    });
+                    
+                    scene.add(model);
                 },
                 undefined,
                 error => console.error('Error loading model:', error)
             );
 
-            if (isMobile) {
-                setupMobileControls();
-            } else {
-                setupDesktopControls();
-            }
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('collisionToggle').addEventListener('click', () => {
+                showCollisions = !showCollisions;
+                collisionObjects.forEach(obj => obj.visible = showCollisions);
+                document.getElementById('collisionToggle').textContent = 
+                    showCollisions ? "Hide Collisions" : "Show Collisions";
             });
+
+            if (isMobile) setupMobileControls();
+            else setupDesktopControls();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createCollisionEnvironment() {
+            const floorGeometry = new THREE.PlaneGeometry(400, 400);
+            const floor = new THREE.Mesh(floorGeometry, new THREE.MeshStandardMaterial({ color: 0x777777 }));
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.5;
+            scene.add(floor);
+            collisionObjects.push(floor);
+
+            const wallGeometry = new THREE.BoxGeometry(400, 3, 0.5);
+            const wallPositions = [
+                [0, 1, -200, 0],
+                [0, 1, 200, Math.PI],
+                [-200, 1, 0, Math.PI/2],
+                [200, 1, 0, -Math.PI/2]
+            ];
+
+            wallPositions.forEach(([x, y, z, rotY]) => {
+                const wall = new THREE.Mesh(wallGeometry, new THREE.MeshStandardMaterial({ color: 0x555555 }));
+                wall.position.set(x, y, z);
+                wall.rotation.y = rotY;
+                scene.add(wall);
+                collisionObjects.push(wall);
+            });
+        }
+
+        function checkCollision(direction) {
+            raycaster.set(camera.position, direction.normalize());
+            const intersects = raycaster.intersectObjects(collisionObjects);
+            return intersects.length > 0 && intersects[0].distance < collisionDistance;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         function setupDesktopControls() {
             document.querySelector('.keyboard-controls').style.display = 'block';
-            
-            // Pointer lock controls
             const canvas = renderer.domElement;
-            
-            canvas.addEventListener('click', () => {
-                canvas.requestPointerLock = canvas.requestPointerLock || 
-                                          canvas.mozRequestPointerLock || 
-                                          canvas.webkitRequestPointerLock;
-                canvas.requestPointerLock();
+
+            canvas.addEventListener('click', () => canvas.requestPointerLock());
+
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = !!document.pointerLockElement;
+                if (isLocked) document.addEventListener('mousemove', updateRotation);
+                else document.removeEventListener('mousemove', updateRotation);
             });
 
-            document.addEventListener('pointerlockchange', lockChangeAlert, false);
-            document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
-            document.addEventListener('webkitpointerlockchange', lockChangeAlert, false);
-
-            function lockChangeAlert() {
-                if (document.pointerLockElement === canvas || 
-                    document.mozPointerLockElement === canvas || 
-                    document.webkitPointerLockElement === canvas) {
-                    isLocked = true;
-                    document.addEventListener('mousemove', updatePosition, false);
-                } else {
-                    isLocked = false;
-                    document.removeEventListener('mousemove', updatePosition, false);
-                }
+            function updateRotation(e) {
+                yaw -= e.movementX * rotateSpeed;
+                pitch = THREE.MathUtils.clamp(pitch - e.movementY * rotateSpeed, -Math.PI/2, Math.PI/2);
             }
 
-            function updatePosition(e) {
-                if (!isLocked) return;
-                
-                const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
-                const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
-                
-                yaw -= movementX * rotateSpeed;
-                pitch -= movementY * rotateSpeed;
-                
-                // Constrain pitch to prevent flipping
-                pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-            }
-
-            // Keyboard controls - changed W and D keys
-            window.addEventListener('keydown', (event) => {
-                switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW':
-                        moveForward = true;
-                        break;
-                    case 'ArrowLeft':
-                    case 'KeyD': // Now D is move left
-                        moveLeft = true;
-                        break;
-                    case 'ArrowDown':
-                    case 'KeyS':
-                        moveBackward = true;
-                        break;
-                    case 'ArrowRight':
-                    case 'KeyA': // Now A is move right
-                        moveRight = true;
-                        break;
-                    case 'Space':
-                        if (canJump === true) velocity.y += 10;
-                        canJump = false;
-                        break;
+            window.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': if(canJump) velocity.y = 350 * clock.getDelta(); canJump = false; break;
                 }
             });
 
-            window.addEventListener('keyup', (event) => {
-                switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW':
-                        moveForward = false;
-                        break;
-                    case 'ArrowLeft':
-                    case 'KeyD': // Now D is move left
-                        moveLeft = false;
-                        break;
-                    case 'ArrowDown':
-                    case 'KeyS':
-                        moveBackward = false;
-                        break;
-                    case 'ArrowRight':
-                    case 'KeyA': // Now A is move right
-                        moveRight = false;
-                        break;
+            window.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
                 }
             });
         }
@@ -233,39 +206,25 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Update camera rotation
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
+            velocity.y -= 980 * delta;
 
-            // Update movement based on keyboard
-            if (!isMobile) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 15.0 * delta; // gravity
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            const moveDirection = new THREE.Vector3();
 
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize(); // this ensures consistent movements in all directions
+            if (moveForward && !checkCollision(forward)) moveDirection.add(forward);
+            if (moveBackward && !checkCollision(forward.clone().negate())) moveDirection.sub(forward);
+            if (moveLeft && !checkCollision(right.clone().negate())) moveDirection.sub(right);
+            if (moveRight && !checkCollision(right)) moveDirection.add(right);
 
-                if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta * 60;
-                if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta * 60;
+            camera.position.add(moveDirection.normalize().multiplyScalar(moveSpeed * delta));
+            camera.position.y += velocity.y * delta;
 
-                // Move in the direction the camera is facing
-                const forward = new THREE.Vector3(0, 0, -1);
-                const right = new THREE.Vector3(-1, 0, 0);
-                forward.applyQuaternion(camera.quaternion);
-                right.applyQuaternion(camera.quaternion);
-                
-                // Apply movement relative to camera orientation
-                camera.translateX(velocity.x * delta);
-                camera.translateZ(velocity.z * delta);
-                camera.position.y += velocity.y * delta; // Y movement is independent
-
-                // Simple ground collision
-                if (camera.position.y < 1.1) {
-                    camera.position.y = 1.1;
-                    velocity.y = 0;
-                    canJump = true;
-                }
+            if (camera.position.y < 1.1) {
+                camera.position.y = 1.1;
+                velocity.y = 0;
+                canJump = true;
             }
 
             renderer.render(scene, camera);
@@ -274,8 +233,7 @@
         function setupMobileControls() {
             document.getElementById('joystick-container').style.display = 'block';
             document.getElementById('right-joystick').style.display = 'block';
-            
-            // Left joystick for movement
+
             const leftJoystick = nipplejs.create({
                 zone: document.getElementById('joystick-container'),
                 mode: 'static',
@@ -283,8 +241,7 @@
                 color: 'white',
                 size: 100
             });
-            
-            // Right joystick for camera rotation
+
             const rightJoystick = nipplejs.create({
                 zone: document.getElementById('right-joystick'),
                 mode: 'static',
@@ -292,25 +249,22 @@
                 color: 'white',
                 size: 100
             });
-            
+
             leftJoystick.on('move', (evt, data) => {
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                
-                const moveX = right.multiplyScalar(data.vector.x * moveSpeed * 0.05);
-                const moveZ = forward.multiplyScalar(data.vector.y * moveSpeed * 0.05);
-                
-                camera.position.add(moveX);
-                camera.position.add(moveZ);
+                const moveDirection = new THREE.Vector3()
+                    .add(right.multiplyScalar(data.vector.x * moveSpeed * 0.05))
+                    .add(forward.multiplyScalar(data.vector.y * moveSpeed * 0.05));
+
+                if (!checkCollision(moveDirection.clone().normalize())) {
+                    camera.position.add(moveDirection);
+                }
             });
-            
+
             rightJoystick.on('move', (evt, data) => {
-                //Inverse only horizontal rotation (X axis)
-                yaw += data.vector.x * 0.05; // Changed from -= to + (inversion)
-                pitch -= data.vector.y * 0.05; // Vertical rotation without changes
-                
-                // Constrain pitch to prevent flipping
-                pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+                yaw += data.vector.x * 0.05;
+                pitch = THREE.MathUtils.clamp(pitch - data.vector.y * 0.05, -Math.PI/2, Math.PI/2);
             });
         }
     </script>
