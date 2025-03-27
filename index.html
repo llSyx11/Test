@@ -254,7 +254,7 @@
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
                 const moveDirection = new THREE.Vector3()
-                    .add(right.multiplyScalar(data.vector.x * moveSpeed * 0.05))
+                    .add(right.multiplyScalar(data.vector.x * moveSpeed * 0.02))
                     .add(forward.multiplyScalar(data.vector.y * moveSpeed * 0.05));
 
                 if (!checkCollision(moveDirection.clone().normalize())) {
