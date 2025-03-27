@@ -112,9 +112,9 @@
 
             // Load model (will be static)
             new THREE.GLTFLoader().load(
-                'https://raw.githubusercontent.com/llSyx11/Test/main/home.fbx',
+                'https://raw.githubusercontent.com/llSyx11/Test/main/Home.fbx',
                 gltf => {
-                    model = fbx.scene;
+                    model = gltf.scene;
                     model.scale.set(2, 2, 2);
                     model.position.set(0, 0, -5); // Position model in front of camera
                     scene.add(model);
