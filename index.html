@@ -55,7 +55,7 @@
     <script>
         let scene, camera, renderer, model;
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        let moveSpeed = 5.0;
+        let moveSpeed = 2.0;
         let rotateSpeed = 0.002;
         let clock = new THREE.Clock();
         let yaw = 0;
@@ -254,7 +254,7 @@
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
                 const moveDirection = new THREE.Vector3()
-                    .add(right.multiplyScalar(data.vector.x * moveSpeed * 0.02))
+                    .add(right.multiplyScalar(data.vector.x * moveSpeed * 0.05))
                     .add(forward.multiplyScalar(data.vector.y * moveSpeed * 0.05));
 
                 if (!checkCollision(moveDirection.clone().normalize())) {
