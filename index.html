@@ -188,7 +188,11 @@
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyD': moveRight = true; break;
-                    case 'Space': if(canJump) velocity.y = 650 * clock.getDelta(); canJump = false; break;
+                    case 'Space': if(canJump) {
+                        velocity.y = 600 * clock.getDelta(); // Увеличили speed до 700
+                        canJump = false; 
+                        break;
+                    }
                 }
             });
 
@@ -207,7 +211,7 @@
             const delta = clock.getDelta();
 
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
-            velocity.y -= 300 * delta;
+            velocity.y -= 5 * delta;
 
             const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
             const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
@@ -221,8 +225,9 @@
             camera.position.add(moveDirection.normalize().multiplyScalar(moveSpeed * delta));
             camera.position.y += velocity.y * delta;
 
-            if (camera.position.y < 1.1) {
-                camera.position.y = 1.1;
+            // Обновили логику для предотвращения immediate падения
+            if (camera.position.y < 0.5) {
+                camera.position.y = 0.5;
                 velocity.y = 0;
                 canJump = true;
             }
