@@ -26,11 +26,22 @@
             font-size: 24px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
             display: none;
+            text-align: right;
+        }
+        .speed-display {
+            position: fixed;
+            bottom: 80px;
+            right: 30px;
+            color: white;
+            font-family: Arial;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
-    <div class="keyboard-controls">W A S D + Q E</div>
+    <div class="keyboard-controls">S D W A + Q E<br>Scroll Wheel - Speed</div>
+    <div class="speed-display">Speed: 0.5x</div>
     <div id="joystick-container"></div>
     <div id="right-joystick"></div>
 
@@ -41,17 +52,15 @@
 
     <script>
         let scene, camera, renderer, model;
-        let moveVector = new THREE.Vector3();
         let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         let moveSpeed = 0.5;
+        const MIN_SPEED = 0.1;
+        const MAX_SPEED = 4.0;
         let rotateSpeed = 0.002;
         let clock = new THREE.Clock();
-        let keyState = {};
         let yaw = 0;
         let pitch = 0;
         let isLocked = false;
-        let velocity = new THREE.Vector3();
-        let direction = new THREE.Vector3();
         let moveForward = false;
         let moveBackward = false;
         let moveLeft = false;
@@ -80,15 +89,15 @@
             directional.position.set(5, 5, 5);
             scene.add(directional);
 
-            // Add floor
-            const floorGeometry = new THREE.PlaneGeometry(20, 20);
-            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x777777 });
+            // Floor
+            const floorGeometry = new THREE.PlaneGeometry(99, 99);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x006400 });
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
             floor.position.y = -0.5;
             scene.add(floor);
 
-            // Load model
+            // Model
             new THREE.GLTFLoader().load(
                 'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
                 gltf => {
@@ -100,6 +109,8 @@
                 undefined,
                 error => console.error('Error loading model:', error)
             );
+
+            document.addEventListener('wheel', handleMouseWheel, { passive: false });
 
             if(isMobile) {
                 setupMobileControls();
@@ -114,97 +125,69 @@
             });
         }
 
+        function handleMouseWheel(event) {
+            event.preventDefault();
+            const delta = Math.sign(event.deltaY);
+            moveSpeed = THREE.MathUtils.clamp(
+                moveSpeed + (delta * -0.1), 
+                MIN_SPEED, 
+                MAX_SPEED
+            );
+            updateSpeedDisplay();
+        }
+
+        function updateSpeedDisplay() {
+            document.querySelector('.speed-display').textContent = 
+                `Speed: ${moveSpeed.toFixed(1)}x`;
+        }
+
         function setupDesktopControls() {
             document.querySelector('.keyboard-controls').style.display = 'block';
-            
             const canvas = renderer.domElement;
             
             canvas.addEventListener('click', () => {
-                canvas.requestPointerLock = canvas.requestPointerLock || 
-                                          canvas.mozRequestPointerLock || 
-                                          canvas.webkitRequestPointerLock;
                 canvas.requestPointerLock();
             });
 
-            document.addEventListener('pointerlockchange', lockChangeAlert, false);
-            document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
-            document.addEventListener('webkitpointerlockchange', lockChangeAlert, false);
+            document.addEventListener('pointerlockchange', lockChangeAlert);
 
             function lockChangeAlert() {
-                if (document.pointerLockElement === canvas || 
-                    document.mozPointerLockElement === canvas || 
-                    document.webkitPointerLockElement === canvas) {
+                if (document.pointerLockElement === canvas) {
                     isLocked = true;
-                    document.addEventListener('mousemove', updatePosition, false);
+                    document.addEventListener('mousemove', updatePosition);
                 } else {
                     isLocked = false;
-                    document.removeEventListener('mousemove', updatePosition, false);
+                    document.removeEventListener('mousemove', updatePosition);
                 }
             }
 
             function updatePosition(e) {
                 if (!isLocked) return;
                 
-                const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
-                const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
-                
-                yaw -= movementX * rotateSpeed;
-                pitch -= movementY * rotateSpeed;
-                
+                yaw -= e.movementX * rotateSpeed;
+                pitch -= e.movementY * rotateSpeed;
                 pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
             }
 
             window.addEventListener('keydown', (event) => {
                 switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW':
-                        moveForward = true;
-                        break;
-                    case 'ArrowLeft':
-                    case 'KeyD':
-                        moveLeft = true;
-                        break;
-                    case 'ArrowDown':
-                    case 'KeyS':
-                        moveBackward = true;
-                        break;
-                    case 'ArrowRight':
-                    case 'KeyA':
-                        moveRight = true;
-                        break;
-                    case 'KeyQ':
-                        moveUp = true;
-                        break;
-                    case 'KeyE':
-                        moveDown = true;
-                        break;
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'KeyQ': moveUp = true; break;
+                    case 'KeyE': moveDown = true; break;
                 }
             });
 
             window.addEventListener('keyup', (event) => {
                 switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW':
-                        moveForward = false;
-                        break;
-                    case 'ArrowLeft':
-                    case 'KeyD':
-                        moveLeft = false;
-                        break;
-                    case 'ArrowDown':
-                    case 'KeyS':
-                        moveBackward = false;
-                        break;
-                    case 'ArrowRight':
-                    case 'KeyA':
-                        moveRight = false;
-                        break;
-                    case 'KeyQ':
-                        moveUp = false;
-                        break;
-                    case 'KeyE':
-                        moveDown = false;
-                        break;
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                    case 'KeyQ': moveUp = false; break;
+                    case 'KeyE': moveDown = false; break;
                 }
             });
         }
@@ -216,28 +199,18 @@
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
 
             if(!isMobile) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
+                const speed = moveSpeed * delta * 2.5;
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                const right = new THREE.Vector3(-1, 0, 0).applyQuaternion(camera.quaternion);
 
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
+                if(moveForward) camera.position.addScaledVector(forward, speed);
+                if(moveBackward) camera.position.addScaledVector(forward, -speed);
+                if(moveLeft) camera.position.addScaledVector(right, speed);
+                if(moveRight) camera.position.addScaledVector(right, -speed);
+                if(moveUp) camera.position.y += speed;
+                if(moveDown) camera.position.y -= speed;
 
-                if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta * 60;
-                if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta * 60;
-                if (moveUp || moveDown) velocity.y = (Number(moveUp) - Number(moveDown)) * moveSpeed * delta * 60;
-
-                const forward = new THREE.Vector3(0, 0, -1);
-                const right = new THREE.Vector3(-1, 0, 0);
-                forward.applyQuaternion(camera.quaternion);
-                right.applyQuaternion(camera.quaternion);
-                
-                camera.translateX(velocity.x * delta);
-                camera.translateZ(velocity.z * delta);
-                camera.position.y += velocity.y * delta;
-
-                // Apply height constraints
-                camera.position.y = Math.max(0, Math.min(10, camera.position.y));
+                camera.position.y = Math.max(0, Math.min(99, camera.position.y));
             }
 
             renderer.render(scene, camera);
