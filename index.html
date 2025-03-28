@@ -39,52 +39,9 @@
             border-radius: 5px;
             cursor: pointer;
         }
-        #loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-family: Arial;
-            z-index: 1000;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 10px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #retry-button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: #3498db;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            display: none;
-        }
     </style>
 </head>
 <body>
-    <div id="loading-overlay">
-        <div class="loader"></div>
-        <div id="loading-text">Загрузка 0%</div>
-        <button id="retry-button">Повторить попытку</button>
-    </div>
     <div class="keyboard-controls">W A S D + Mouse</div>
     <button id="collisionToggle">Show Collisions</button>
     <div id="joystick-container"></div>
@@ -96,12 +53,7 @@
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
 
     <script>
-        const MAX_RETRIES = 10;
-        const RETRY_INTERVAL = 60000;
-        let retryCount = 0;
-        let currentController = null;
-        let currentTimeout = null;
-
+        // Конфигурация персонажа
         const PLAYER_HEIGHT = 0.5;
         const CAMERA_HEIGHT = 1.6;
         const CAPSULE_RADIUS = 0.03;
@@ -141,6 +93,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
+            // Освещение
             const ambient = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambient);
             
@@ -148,15 +101,37 @@
             directional.position.set(5, 5, 5);
             scene.add(directional);
 
+            // Создание окружения
             createCollisionEnvironment();
             createSky();
             createTrees();
 
-            const retryButton = document.getElementById('retry-button');
-            retryButton.addEventListener('click', startLoading);
-            
-            startLoading();
+            // Загрузка модели
+            new THREE.GLTFLoader().load(
+                'https://raw.githubusercontent.com/llSyx11/Test/main/001.glb',
+                gltf => {
+                    model = gltf.scene;
+                    model.scale.set(1, 1, 1);
+                    model.position.set(0, 0, -5);
+                    
+                    model.traverse(child => {
+                        if (child.isMesh && child.name.startsWith('collision_')) {
+                            child.material = new THREE.MeshStandardMaterial({
+                                color: 0xff0000,
+                                side: THREE.DoubleSide,
+                                visible: showCollisions
+                            });
+                            collisionObjects.push(child);
+                        }
+                    });
+                    
+                    scene.add(model);
+                },
+                undefined,
+                error => console.error('Error loading model:', error)
+            );
 
+            // Управление
             document.getElementById('collisionToggle').addEventListener('click', () => {
                 showCollisions = !showCollisions;
                 collisionObjects.forEach(obj => obj.material.visible = showCollisions);
@@ -170,102 +145,231 @@
             window.addEventListener('resize', onWindowResize);
         }
 
-        function startLoading() {
-            retryCount = 0;
-            document.getElementById('retry-button').style.display = 'none';
-            loadModelWithRetry();
+        function createCollisionEnvironment() {
+            const floorGeometry = new THREE.PlaneGeometry(400, 400);
+            const floor = new THREE.Mesh(floorGeometry, new THREE.MeshStandardMaterial({ 
+                color: 0x777777,
+                roughness: 0.8
+            }));
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.5;
+            scene.add(floor);
+            collisionObjects.push(floor);
+
+            // Стены
+            const wallGeometry = new THREE.BoxGeometry(400, 3, 0.5);
+            const wallPositions = [
+                [0, 1, -200, 0],
+                [0, 1, 200, Math.PI],
+                [-200, 1, 0, Math.PI/2],
+                [200, 1, 0, -Math.PI/2]
+            ];
+
+            wallPositions.forEach(([x, y, z, rotY]) => {
+                const wall = new THREE.Mesh(wallGeometry, new THREE.MeshStandardMaterial({ color: 0x555555 }));
+                wall.position.set(x, y, z);
+                wall.rotation.y = rotY;
+                scene.add(wall);
+                collisionObjects.push(wall);
+            });
         }
 
-        function loadModelWithRetry() {
-            const loadingOverlay = document.getElementById('loading-overlay');
-            const loadingText = document.getElementById('loading-text');
-            const retryButton = document.getElementById('retry-button');
+        function createSky() {
+            // Солнце
+            const sunGeometry = new THREE.CircleGeometry(5, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xFFFF00,
+                side: THREE.DoubleSide
+            });
+            const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            sun.position.set(0, 50, -100);
+            sun.rotation.x = Math.PI/2;
+            scene.add(sun);
 
-            if (currentController) currentController.abort();
-            if (currentTimeout) clearTimeout(currentTimeout);
-
-            currentController = new AbortController();
-            currentTimeout = setTimeout(() => {
-                currentController.abort();
-                handleError(new Error('Timeout error'), loadingText, retryButton);
-            }, 60000);
-
-            loadingText.textContent = `Попытка ${retryCount + 1}/${MAX_RETRIES}...`;
-
-            fetch('001.glb', { signal: currentController.signal })
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    
-                    const reader = response.body.getReader();
-                    const contentLength = +response.headers.get('Content-Length');
-                    let receivedLength = 0;
-                    const chunks = [];
-                    
-                    return new Promise((resolve, reject) => {
-                        function pump() {
-                            reader.read().then(({ done, value }) => {
-                                if (done) {
-                                    resolve(new Blob(chunks));
-                                    return;
-                                }
-                                
-                                chunks.push(value);
-                                receivedLength += value.length;
-                                const percent = Math.round((receivedLength / contentLength) * 100);
-                                loadingText.textContent = `Загрузка ${percent}%`;
-                                pump();
-                            }).catch(reject);
-                        }
-                        pump();
-                    });
-                })
-                .then(blob => {
-                    clearTimeout(currentTimeout);
-                    const loader = new THREE.GLTFLoader();
-                    loader.parse(blob.arrayBuffer(), '', gltf => {
-                        model = gltf.scene;
-                        model.scale.set(1, 1, 1);
-                        model.position.set(0, 0, -5);
-                        
-                        model.traverse(child => {
-                            if (child.isMesh && child.name.startsWith('collision_')) {
-                                child.material = new THREE.MeshStandardMaterial({
-                                    color: 0xff0000,
-                                    side: THREE.DoubleSide,
-                                    visible: showCollisions
-                                });
-                                collisionObjects.push(child);
-                            }
-                        });
-                        
-                        scene.add(model);
-                        document.getElementById('loading-overlay').style.display = 'none';
-                    }, error => {
-                        handleError(error, loadingText, retryButton);
-                    });
-                })
-                .catch(error => {
-                    handleError(error, loadingText, retryButton);
-                });
-        }
-
-        function handleError(error, loadingText, retryButton) {
-            console.error('Error:', error);
-            clearTimeout(currentTimeout);
+            // Облака
+            function createCloud() {
+                const cloud = new THREE.Group();
+                const geo = new THREE.BoxGeometry(2, 0.5, 2);
+                const mat = new THREE.MeshPhongMaterial({ color: 0x4682B4 });
+                
+                for(let i = 0; i < 5; i++) {
+                    const part = new THREE.Mesh(geo, mat);
+                    part.position.set(
+                        Math.random() * 4 - 2,
+                        Math.random() * 1 - 0.5,
+                        Math.random() * 4 - 2
+                    );
+                    cloud.add(part);
+                }
+                
+                cloud.position.set(
+                    Math.random() * 400 - 200,
+                    30 + Math.random() * 20,
+                    Math.random() * 400 - 200
+                );
+                return cloud;
+            }
             
-            if (retryCount < MAX_RETRIES - 1) {
-                retryCount++;
-                loadingText.textContent = `Повторная попытка ${retryCount}/${MAX_RETRIES} через 60 сек...`;
-                setTimeout(() => loadModelWithRetry(), RETRY_INTERVAL);
-            } else {
-                loadingText.textContent = 'Ошибка загрузки модели';
-                retryButton.style.display = 'block';
+            for(let i = 0; i < 20; i++) {
+                scene.add(createCloud());
             }
         }
 
-        // Остальные функции (createCollisionEnvironment, createSky, createTrees, checkCollision, 
-        // setupDesktopControls, setupMobileControls, animate и т.д.) остаются без изменений
-        // ... [остальной код без изменений] ...
+        function createTrees() {
+            const treeCount = 100;
+            const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+            const crownMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 });
+            
+            for(let i = 0; i < treeCount; i++) {
+                // Ствол
+                const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.4, 2, 8);
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                
+                // Крона
+                const crownGeometry = new THREE.SphereGeometry(1.5, 6, 6);
+                const crown = new THREE.Mesh(crownGeometry, crownMaterial);
+                
+                // Позиционирование
+                trunk.position.set(
+                    Math.random() * 400 - 200,
+                    1,
+                    Math.random() * 400 - 200
+                );
+                crown.position.copy(trunk.position);
+                crown.position.y += 1.5;
+                
+                scene.add(trunk);
+                scene.add(crown);
+            }
+        }
+
+        function checkCollision(direction) {
+            const capsuleOffset = new THREE.Vector3(0, -PLAYER_HEIGHT/2 + CAPSULE_RADIUS, 0);
+            const rayOrigin = camera.position.clone().add(capsuleOffset);
+            
+            raycaster.firstHitOnly = true;
+            raycaster.params.Line.threshold = 0.1;
+            raycaster.set(rayOrigin, direction.normalize());
+            
+            const intersects = raycaster.intersectObjects(collisionObjects);
+            return intersects.length > 0 && intersects[0].distance < COLLISION_DISTANCE + CAPSULE_RADIUS;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function setupDesktopControls() {
+            document.querySelector('.keyboard-controls').style.display = 'block';
+            const canvas = renderer.domElement;
+
+            canvas.addEventListener('click', () => canvas.requestPointerLock());
+
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = !!document.pointerLockElement;
+                if (isLocked) document.addEventListener('mousemove', updateRotation);
+                else document.removeEventListener('mousemove', updateRotation);
+            });
+
+            function updateRotation(e) {
+                yaw -= e.movementX * rotateSpeed;
+                pitch = THREE.MathUtils.clamp(pitch - e.movementY * rotateSpeed, -Math.PI/2, Math.PI/2);
+            }
+
+            window.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': 
+                        if(canJump) {
+                            velocity.y = JUMP_FORCE * clock.getDelta();
+                            canJump = false; 
+                        }
+                        break;
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            camera.rotation.set(pitch, yaw, 0, 'YXZ');
+            velocity.y -= GRAVITY_FORCE * delta;
+
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            const moveDirection = new THREE.Vector3();
+
+            if (moveForward && !checkCollision(forward)) moveDirection.add(forward);
+            if (moveBackward && !checkCollision(forward.clone().negate())) moveDirection.sub(forward);
+            if (moveLeft && !checkCollision(right.clone().negate())) moveDirection.sub(right);
+            if (moveRight && !checkCollision(right)) moveDirection.add(right);
+
+            camera.position.add(moveDirection.normalize().multiplyScalar(moveSpeed * delta));
+            camera.position.y += velocity.y * delta;
+
+            // Ограничение падения
+            const minHeight = CAMERA_HEIGHT - PLAYER_HEIGHT + CAPSULE_RADIUS;
+            if (camera.position.y < minHeight) {
+                camera.position.y = minHeight;
+                velocity.y = 0;
+                canJump = true;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function setupMobileControls() {
+            document.getElementById('joystick-container').style.display = 'block';
+            document.getElementById('right-joystick').style.display = 'block';
+
+            const leftJoystick = nipplejs.create({
+                zone: document.getElementById('joystick-container'),
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'white',
+                size: 100
+            });
+
+            const rightJoystick = nipplejs.create({
+                zone: document.getElementById('right-joystick'),
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'white',
+                size: 100
+            });
+
+            leftJoystick.on('move', (evt, data) => {
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                const moveDirection = new THREE.Vector3()
+                    .add(right.multiplyScalar(data.vector.x * moveSpeed * 0.05))
+                    .add(forward.multiplyScalar(data.vector.y * moveSpeed * 0.05));
+
+                if (!checkCollision(moveDirection.clone().normalize())) {
+                    camera.position.add(moveDirection);
+                }
+            });
+
+            rightJoystick.on('move', (evt, data) => {
+                yaw += data.vector.x * 0.05;
+                pitch = THREE.MathUtils.clamp(pitch - data.vector.y * 0.05, -Math.PI/2, Math.PI/2);
+            });
+        }
     </script>
 </body>
 </html>
