@@ -68,6 +68,13 @@
         let moveUp = false;
         let moveDown = false;
 
+        // Mobile control variables
+        let joystickX = 0;
+        let joystickY = 0;
+        let lookX = 0;
+        let lookY = 0;
+        let verticalMove = 0;
+
         init();
         animate();
 
@@ -198,7 +205,29 @@
 
             camera.rotation.set(pitch, yaw, 0, 'YXZ');
 
-            if(!isMobile) {
+            if(isMobile) {
+                // Mobile movement
+                const speed = moveSpeed * delta * 2.5;
+                
+                // Rotation
+                yaw += lookX * 2 * delta;
+                pitch += lookY * 2 * delta;
+                pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+
+                // Horizontal movement
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                
+                const moveDirection = new THREE.Vector3();
+                moveDirection.addScaledVector(right, joystickX * speed);
+                moveDirection.addScaledVector(forward, joystickY * speed);
+                camera.position.add(moveDirection);
+
+                // Vertical movement
+                camera.position.y += verticalMove * speed;
+                camera.position.y = Math.max(0, Math.min(99, camera.position.y));
+            } else {
+                // Desktop movement
                 const speed = moveSpeed * delta * 2.5;
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 const right = new THREE.Vector3(-1, 0, 0).applyQuaternion(camera.quaternion);
@@ -220,6 +249,7 @@
             document.getElementById('joystick-container').style.display = 'block';
             document.getElementById('right-joystick').style.display = 'block';
             
+            // Left joystick (movement)
             const leftJoystick = nipplejs.create({
                 zone: document.getElementById('joystick-container'),
                 mode: 'static',
@@ -228,6 +258,7 @@
                 size: 100
             });
             
+            // Right joystick (look)
             const rightJoystick = nipplejs.create({
                 zone: document.getElementById('right-joystick'),
                 mode: 'static',
@@ -235,24 +266,59 @@
                 color: 'white',
                 size: 100
             });
-            
+
+            // Vertical movement buttons
+            const upButton = document.createElement('div');
+            upButton.style.position = 'fixed';
+            upButton.style.right = '140px';
+            upButton.style.bottom = '140px';
+            upButton.style.width = '60px';
+            upButton.style.height = '60px';
+            upButton.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
+            upButton.style.borderRadius = '50%';
+            upButton.style.textAlign = 'center';
+            upButton.style.lineHeight = '60px';
+            upButton.textContent = '↑';
+            document.body.appendChild(upButton);
+
+            const downButton = document.createElement('div');
+            downButton.style.position = 'fixed';
+            downButton.style.right = '140px';
+            downButton.style.bottom = '40px';
+            downButton.style.width = '60px';
+            downButton.style.height = '60px';
+            downButton.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
+            downButton.style.borderRadius = '50%';
+            downButton.style.textAlign = 'center';
+            downButton.style.lineHeight = '60px';
+            downButton.textContent = '↓';
+            document.body.appendChild(downButton);
+
+            // Control event listeners
             leftJoystick.on('move', (evt, data) => {
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                
-                const moveX = right.multiplyScalar(data.vector.x * moveSpeed * 0.05);
-                const moveZ = forward.multiplyScalar(data.vector.y * moveSpeed * 0.05);
-                
-                camera.position.add(moveX);
-                camera.position.add(moveZ);
+                joystickX = data.vector.x;
+                joystickY = data.vector.y;
             });
             
-            rightJoystick.on('move', (evt, data) => {
-                yaw += data.vector.x * 0.05;
-                camera.position.y += data.vector.y * moveSpeed * 0.05;
-                camera.position.y = Math.max(0, Math.min(10, camera.position.y));
-                camera.rotation.set(pitch, yaw, 0, 'YXZ');
+            leftJoystick.on('end', () => {
+                joystickX = 0;
+                joystickY = 0;
             });
+
+            rightJoystick.on('move', (evt, data) => {
+                lookX = data.vector.x;
+                lookY = data.vector.y;
+            });
+
+            rightJoystick.on('end', () => {
+                lookX = 0;
+                lookY = 0;
+            });
+
+            upButton.addEventListener('touchstart', () => verticalMove = 1);
+            upButton.addEventListener('touchend', () => verticalMove = 0);
+            downButton.addEventListener('touchstart', () => verticalMove = -1);
+            downButton.addEventListener('touchend', () => verticalMove = 0);
         }
     </script>
 </body>
