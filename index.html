@@ -6,7 +6,11 @@
     <title>My Home From Dreams</title>
     <style>
         * { margin: 0; padding: 0; }
-        canvas { display: block; }
+        canvas { 
+            display: block; 
+            user-select: none;
+            -webkit-user-select: none;
+        }
         #joystick-container, #right-joystick { 
             position: fixed; 
             bottom: 20px;
@@ -37,11 +41,44 @@
             font-size: 20px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
+        /* Новые стили для кнопок скорости */
+        .speed-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .speed-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Перемещение скорости для мобилок */
+        @media (max-width: 768px) {
+            .speed-display {
+                top: 25px;
+                right: 90px;
+                bottom: auto;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="keyboard-controls">S D W A + Q E<br>Scroll Wheel - Speed</div>
     <div class="speed-display">Speed: 0.5x</div>
+    <div class="speed-controls">
+        <div class="speed-btn" id="speed-down">-</div>
+        <div class="speed-btn" id="speed-up">+</div>
+    </div>
     <div id="joystick-container"></div>
     <div id="right-joystick"></div>
 
@@ -319,6 +356,19 @@
             upButton.addEventListener('touchend', () => verticalMove = 0);
             downButton.addEventListener('touchstart', () => verticalMove = -1);
             downButton.addEventListener('touchend', () => verticalMove = 0);
+
+            // Кнопки скорости
+            const speedUp = document.getElementById('speed-up');
+            const speedDown = document.getElementById('speed-down');
+
+            speedUp.addEventListener('touchstart', () => {
+                moveSpeed = THREE.MathUtils.clamp(moveSpeed + 0.1, MIN_SPEED, MAX_SPEED);
+                updateSpeedDisplay();
+            });
+            speedDown.addEventListener('touchstart', () => {
+                moveSpeed = THREE.MathUtils.clamp(moveSpeed - 0.1, MIN_SPEED, MAX_SPEED);
+                updateSpeedDisplay();
+            });
         }
     </script>
 </body>
