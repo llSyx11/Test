@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Скачать библиотеки для аудио-конвертера</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+    }
+    .file-list {
+      margin-top: 1rem;
+    }
+    .file-list li {
+      margin: 0.5rem 0;
+    }
+    button {
+      margin-top: 2rem;
+      padding: 1rem;
+      font-size: 1.2rem;
+      cursor: pointer;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Скачать библиотеки для проекта</h1>
+  <ul class="file-list">
+    <li><a href="https://raw.githubusercontent.com/jfrancos/oggmented/master/dist/oggmented-bundle.js" download>oggmented-bundle.js</a></li>
+    <li><a href="https://unpkg.com/wasm-media-encoders/dist/wasm/ogg.wasm" download>oggmented.wasm (альтернатива)</a></li>
+    <li><a href="https://unpkg.com/lamejs@1.2.0/lame.min.js" download>lame.min.js</a></li>
+    <li><a href="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" download>jszip.min.js</a></li>
+  </ul>
+
+  <button onclick="downloadAll()">📦 Скачать все одним архивом</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    async function downloadAll() {
+      const files = {
+        "oggmented-bundle.js": "https://raw.githubusercontent.com/jfrancos/oggmented/master/dist/oggmented-bundle.js",
+        "oggmented.wasm": "https://unpkg.com/wasm-media-encoders/dist/wasm/ogg.wasm",
+        "lame.min.js": "https://unpkg.com/lamejs@1.2.0/lame.min.js",
+        "jszip.min.js": "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+      };
+
+      const zip = new JSZip();
+      const status = [];
+
+      for (const [filename, url] of Object.entries(files)) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`${filename} not found`);
+          const blob = await response.blob();
+          zip.file(filename, blob);
+        } catch (err) {
+          status.push(`${filename} — ошибка загрузки: ${err.message}`);
+        }
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = "audio-libs.zip";
+      link.click();
+
+      if (status.length) alert(status.join("\n"));
+    }
+  </script>
+</body>
+</html>
