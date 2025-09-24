@@ -344,7 +344,7 @@
 
             rightJoystick.on('move', (evt, data) => {
                 lookX = data.vector.x;
-                lookY = data.vector.y;
+                lookY = -data.vector.y;
             });
 
             rightJoystick.on('end', () => {
@@ -373,3 +373,4 @@
     </script>
 </body>
 </html>
+
